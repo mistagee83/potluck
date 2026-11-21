@@ -203,3 +203,27 @@
 **Not done / next**
 - P4 (publish): logo file and favicon, landing page, address, Hub `APP_ORIGINS` / product, Privacy/Terms, the
   Hub-repo rules block and TTL, price rows, Secret Manager key, deploy. All with András's approval.
+
+## P4 – Publish (in progress, 2026-11-21)
+
+**Decisions (András, 2026-11-21)**
+- Logo and favicon: made from the design brief (Claude). Console steps (Cloudflare, Firebase, Hub admin) in
+  András's Chrome by Claude, with a question before every save; secrets typed by András.
+
+**Built so far**
+- Brand images in `public/img/brand/`: logo sticker, app icon 512 and 180 (apple-touch), favicons 16/32/48, OG image
+  1200×630, drawn with the brand fonts by `public/dev/brand.html` (developer tool; re-export from there).
+- Landing page `public/index.html` + `css/landing.css`: hero, the problem with a sample board, how it works in 3
+  steps, the three templates, what students see, price (free start, Hub pass €9/100 credits), FAQ (accounts,
+  student data, AI, hand-ins, co-teachers), closing call to action, footer with Hub links; OG and Twitter tags;
+  favicons on every page.
+- `public/js/pixel.js`: the Hub's consent pattern; `PIXEL_ID` null (the Hub has none yet), so no banner and no
+  tracking; events wired (ViewContent and InitiateCheckout on the landing page, Lead on the first teacher sign-in).
+- Hub repo (not committed yet): Potluck origin in `shared/sso.js`, the Potluck rules block in `firestore.rules`,
+  TTL on `deleteAt` for the 9 student-data collection groups, Privacy page (students, Gemini API, 90 days), spec.
+  Hub tests: 64 pass. The Potluck emulator copy of the rules is now the Hub's file.
+- `docs/release.md`: the release steps in order.
+
+**Verified**
+- Landing page at 375 px and desktop: no horizontal overflow, the hero matches the mockup.
+- `npm test` 38 pass.

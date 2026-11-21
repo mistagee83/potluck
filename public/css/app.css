@@ -121,3 +121,6 @@ details.box > .stack, details.box > .md { margin-top: 12px; }
 .preview ul, .preview ol { margin: 4px 0; padding-left: 20px; }
 .fb { margin-top: 18px; padding-top: 14px; border-top: var(--pl-line-thin) dashed var(--c-line); }
 ul.error { margin: 0; padding-left: 30px; }
+
+/* cookie banner (only with a Pixel id) */
+.cookie-banner { position: fixed; left: 12px; right: 12px; bottom: 12px; max-width: 560px; margin: 0 auto; z-index: 50; display: grid; gap: 10px; }

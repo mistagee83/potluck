@@ -16,6 +16,7 @@ import { TT } from './text.js';
 import { esc, t, fmtDay, fmtDate, markdown, drafts, keepFocus, errorText, download, header } from './ui.js';
 import { hasAccess } from '/engines/hub/entitlements.js';
 import { adminModule } from './admin.js';
+import { initConsent, track } from './pixel.js';
 import * as P from '/engines/project.js';
 import { aiModule } from './teacher-ai.js';
 
@@ -701,6 +702,7 @@ async function loadInvite(token) {
   render();
 }
 
+initConsent();
 render();
 onAuthStateChanged(fb.auth, async (u) => {
   const next = u && !u.isAnonymous && !(await u.getIdTokenResult()).claims.plStudent ? u : null;
@@ -710,6 +712,8 @@ onAuthStateChanged(fb.auth, async (u) => {
   subs.account.forEach((u) => u()); subs.account = [];
   if (!user) { closeProject(); S.view = 'home'; render(); return; }
   SI.email = ''; SI.note = ''; SI.error = '';
+  // Meta Pixel: one Lead per browser, on the first teacher sign-in (does nothing without a Pixel id).
+  try { if (!localStorage.getItem('pl:lead')) { track('Lead', { content_name: 'Potluck teacher' }); localStorage.setItem('pl:lead', '1'); } } catch { /* storage off */ }
   watchHome();
   watchAccount();
   const h = readHash();

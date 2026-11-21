@@ -378,8 +378,7 @@ service cloud.firestore {
     // ---- end Hubbaloo -----------------------------------------------------------------
 
     // ---- Potluck (D:/dev/Potluck) -----------------------------------------------------
-    // In the Potluck emulator copy; it goes into the Hub's firestore.rules with the owner's approval
-    // (Hub repo commit + deploy from there). Every write goes through Potluck functions (pl*), so the
+    // Every write goes through Potluck functions (pl*), so the
     // client only reads. Students sign in with a custom token from plJoin carrying the claims plStudent
     // (project id) and plSid (student id). Hub SSO teachers also arrive with a custom token, so a
     // student is told apart by that claim, never by the sign-in provider.

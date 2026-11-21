@@ -23,3 +23,6 @@ export function publicBaseUrl() {
   if (host === 'localhost' || host === '127.0.0.1') return location.origin;
   return PUBLIC_BASE_URL;
 }
+
+// Meta Pixel id (the Hub's; Hub shared/config.js). null = no banner and no tracking (the Hub has none yet).
+export const PIXEL_ID = null;

@@ -19,6 +19,7 @@ export const APP_ORIGINS = [
   'https://quiz.mrandrewshub.com',
   'https://hubbaloo.mrandrewshub.com',
   'https://wordnerd.mrandrewshub.com',
+  'https://potluck.mrandrewshub.com',
 ];
 // Helyi fejlesztés (bármely port): a kód a tanár saját gépére megy, onnan más nem éri el.
 const LOCAL = /^http:\/\/(localhost|127\.0\.0\.1)(:\d{2,5})?$/;
@@ -28,6 +29,7 @@ export const APP_NAMES = {
   'https://quiz.mrandrewshub.com': 'Quiz of the Damned',
   'https://hubbaloo.mrandrewshub.com': 'Hubbaloo',
   'https://wordnerd.mrandrewshub.com': 'WordNerd',
+  'https://potluck.mrandrewshub.com': 'Potluck',
 };
 
 export const isAppOrigin = (origin) => APP_ORIGINS.includes(origin) || LOCAL.test(String(origin));

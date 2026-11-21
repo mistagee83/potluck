@@ -1,0 +1,18 @@
+/* Landing page (P4). Same tokens and components as the app; gingham only in the header. */
+.hero { padding-top: 32px; }
+.section { padding-top: 36px; padding-bottom: 36px; display: grid; gap: 18px; }
+.band { background: var(--c-surface); border-top: var(--pl-line) solid var(--c-line); border-bottom: var(--pl-line) solid var(--c-line); }
+.band .two { display: grid; gap: 26px; padding-top: 36px; padding-bottom: 40px; align-items: center; }
+.mini-board { display: grid; gap: 10px; }
+.mini-board .btn.bring { min-height: 40px; cursor: default; }
+.steps-3 { list-style: none; padding: 0; margin: 0; display: grid; gap: 22px; }
+.steps-3 .num { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: var(--pl-line) solid var(--c-line); background: var(--c-tag); font: 800 20px var(--pl-font-display); }
+.faq details p { margin-top: 10px; }
+.closing { text-align: center; justify-items: center; }
+.closing .btn.primary { min-width: 260px; }
+.footer { padding-top: 24px; padding-bottom: 40px; font-size: 14px; color: var(--c-text-muted); border-top: var(--pl-line-thin) dashed var(--c-line); }
+.topbar .pill a { color: var(--c-text); font-weight: 900; text-decoration: none; }
+@media (min-width: 760px) {
+  .band .two { grid-template-columns: 1.1fr 0.9fr; }
+  .steps-3 { grid-template-columns: repeat(3, 1fr); }
+}

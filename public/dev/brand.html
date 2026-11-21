@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="robots" content="noindex">
+  <title>Potluck brand images (developer tool)</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@800&family=Nunito:wght@800&display=swap">
+  <style>body { font: 14px system-ui; background: #eee; padding: 20px; } canvas { display: block; margin: 12px 0; background: repeating-conic-gradient(#ddd 0 25%, #fff 0 50%) 0 0 / 16px 16px; }</style>
+</head>
+<body>
+  <!-- Developer tool: draws the Potluck logo sticker, the app icons and the OG image on canvases with the brand
+       fonts (design/POTLUCK-DESIGN.md), so the PNGs in public/img/brand/ can be re-exported. window.brand.export()
+       returns the PNGs as data URLs. Not linked from the app. -->
+  <div id="out"></div>
+  <script type="module">
+    const C = { cream: '#FFF8EC', white: '#FFFFFF', ink: '#3B2A20', inkSoft: '#5A463A', tomato: '#C4321F', honey: '#FFD98A', lettuce: '#BFE3A8', butter: '#FFE9B8', gingham: 'rgba(196,50,31,0.55)' };
+    await document.fonts.load('800 64px "Baloo 2"');
+    await document.fonts.load('800 32px Nunito');
+
+    function canvas(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; document.getElementById('out').append(c); return [c, c.getContext('2d')]; }
+    function rr(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); }
+    // A sticker: hard ink shadow, fill, ink outline (all scaled by s = one design pixel).
+    function sticker(ctx, x, y, w, h, r, fill, s, shadow = 4) {
+      ctx.fillStyle = C.ink; rr(ctx, x + shadow * s, y + shadow * s, w, h, r); ctx.fill();
+      ctx.fillStyle = fill; rr(ctx, x, y, w, h, r); ctx.fill();
+      ctx.lineWidth = 3 * s; ctx.strokeStyle = C.ink; rr(ctx, x, y, w, h, r); ctx.stroke();
+    }
+    function gingham(ctx, w, h, cell) {
+      ctx.fillStyle = C.white; ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = C.gingham;
+      for (let x = 0; x < w; x += cell * 2) ctx.fillRect(x, 0, cell, h);
+      for (let y = 0; y < h; y += cell * 2) ctx.fillRect(0, y, w, cell);
+    }
+
+    // Logo: the "Potluck" sticker, rotated -3deg, on transparent (design: 27px Baloo 2 800, padding 2px 16px).
+    function logo(scale) {
+      const s = scale; const font = `800 ${27 * s}px "Baloo 2"`;
+      const [c0, m] = canvas(10, 10); const ctx0 = m; ctx0.font = font; const tw = ctx0.measureText('Potluck').width; c0.remove();
+      const w = tw + 32 * s; const h = 27 * 1.3 * s + 4 * s;
+      const pad = 14 * s;
+      const [c, ctx] = canvas(Math.ceil(w + pad * 2), Math.ceil(h + pad * 2 + w * 0.06));
+      ctx.translate(c.width / 2, c.height / 2); ctx.rotate(-3 * Math.PI / 180); ctx.translate(-w / 2, -h / 2);
+      sticker(ctx, 0, 0, w, h, 14 * s, C.tomato, s);
+      ctx.fillStyle = C.white; ctx.font = font; ctx.textBaseline = 'middle'; ctx.fillText('Potluck', 16 * s, h / 2 + 2 * s);
+      return c;
+    }
+
+    // App icon: a "P" sticker on cream (tiles), or on transparent for the favicon.
+    function icon(size, { tile = true } = {}) {
+      const [c, ctx] = canvas(size, size);
+      const s = size / 64;
+      if (tile) { ctx.fillStyle = C.cream; ctx.fillRect(0, 0, size, size); }
+      const box = tile ? 44 : 54; const off = tile ? 8 : 3;
+      ctx.save(); ctx.translate(size / 2, size / 2); ctx.rotate(-3 * Math.PI / 180); ctx.translate(-size / 2, -size / 2);
+      sticker(ctx, off * s, off * s, box * s, box * s, (size <= 32 ? 10 : 12) * s, C.tomato, s, size <= 32 ? 3 : 4);
+      ctx.fillStyle = C.white; ctx.font = `800 ${(tile ? 38 : 46) * s}px "Baloo 2"`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('P', (off + box / 2) * s, (off + box / 2 + (tile ? 3 : 4)) * s);
+      ctx.restore();
+      return c;
+    }
+
+    // OG image 1200x630: gingham band, logo sticker, the hero line with the tomato phrase, a small board card.
+    function og() {
+      const [c, ctx] = canvas(1200, 630);
+      ctx.fillStyle = C.cream; ctx.fillRect(0, 0, 1200, 630);
+      ctx.save(); ctx.beginPath(); ctx.rect(0, 0, 1200, 120); ctx.clip(); gingham(ctx, 1200, 120, 40); ctx.restore();
+      ctx.fillStyle = C.ink; ctx.fillRect(0, 120, 1200, 4);
+      const l = logo(2.2); ctx.drawImage(l, 40, 60 - l.height / 2); l.remove();
+      ctx.fillStyle = C.ink; ctx.font = '800 76px "Baloo 2"'; ctx.textBaseline = 'alphabetic';
+      ctx.fillText('Group projects where', 64, 250);
+      ctx.fillStyle = C.tomato; ctx.fillText('everyone brings', 64, 335);
+      const w = ctx.measureText('everyone brings ').width; ctx.fillStyle = C.ink; ctx.fillText('something.', 64 + w, 335);
+      ctx.fillStyle = C.inkSoft; ctx.font = '800 30px Nunito';
+      ctx.fillText('Pick a classroom-tested project. AI fits it to your class.', 64, 410);
+      ctx.fillText('Then one board runs it all.', 64, 452);
+      // board card (two task rows: done and claimed)
+      const x = 690, y = 466, cw = 470, ch = 128;
+      sticker(ctx, x, y, cw, ch, 20, C.white, 1.4, 6);
+      const rows = [[C.lettuce, 'Pick 5-8 tips', 'Mia'], [C.butter, 'Write the first drafts', 'Leo']];
+      rows.forEach(([fill, text, who], i) => {
+        const ry = y + 14 + i * 54;
+        ctx.fillStyle = fill; rr(ctx, x + 14, ry, cw - 28, 46, 14); ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = C.ink; rr(ctx, x + 14, ry, cw - 28, 46, 14); ctx.stroke();
+        ctx.beginPath(); ctx.arc(x + 40, ry + 23, 13, 0, Math.PI * 2); ctx.fillStyle = i ? C.white : C.ink; ctx.fill(); ctx.stroke();
+        ctx.fillStyle = C.ink; ctx.font = '800 22px Nunito'; ctx.textBaseline = 'middle'; ctx.fillText(text, x + 66, ry + 24);
+        ctx.font = '800 18px Nunito'; ctx.textAlign = 'right'; ctx.fillText(who, x + cw - 30, ry + 24); ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+      });
+      ctx.fillStyle = C.inkSoft; ctx.font = '800 24px Nunito'; ctx.fillText('potluck.mrandrewshub.com', 64, 580);
+      return c;
+    }
+
+    const items = {
+      'logo.png': logo(4),
+      'icon-512.png': icon(512),
+      'apple-touch-icon.png': icon(180),
+      'favicon-48.png': icon(48, { tile: false }),
+      'favicon-32.png': icon(32, { tile: false }),
+      'favicon-16.png': icon(16, { tile: false }),
+      'og-image.png': og(),
+    };
+    window.brand = { export: () => Object.fromEntries(Object.entries(items).map(([k, c]) => [k, c.toDataURL('image/png')])) };
+    document.title = 'Potluck brand images: ready';
+  </script>
+</body>
+</html>
