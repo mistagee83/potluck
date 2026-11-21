@@ -238,3 +238,13 @@
 - Landing page: hands a Hub "Open app" `#sso=` code to `/teacher.html` (tested locally); indexable now, with
   `robots.txt` and `sitemap.xml`; the app pages and `/dev/` stay noindex (headers + meta).
 - Waiting: the Potluck `main` branch (needs András's explicit approval), then Cloudflare Pages + domain.
+- Potluck `main` created and pushed (András's approval), Cloudflare Pages project `potluck` (GitHub
+  `mistagee83/potluck`, production branch `main`, build `node scripts/build-web.mjs`, output `dist`;
+  `potluck-a4d.pages.dev`), custom domain `potluck.mrandrewshub.com` active (CNAME added by Cloudflare).
+- Headers: Pages serves `/teacher.html` as `/teacher`; noindex and no-cache now also on the pretty URLs.
+- Live: signed in through the Hub (`/account?return=…` → SSO code → Potluck teacher page, Admin link shown),
+  imported and published the three templates, started "Live test: 5-star disaster" (no credits), launched (code
+  issued), a student joined in a second tab, was put in Team 1, claimed and finished a task and handed in a link;
+  the monitor showed "Handed in" and 1/11 live.
+- Not yet: the Hub product is still a draft (publishing it lists Potluck on the Hub); an AI step with real
+  credits not run live; the live test project is still open (András can close it, or keep it as a demo).
