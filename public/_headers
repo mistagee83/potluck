@@ -5,14 +5,26 @@
 
 /teacher.html
   X-Robots-Tag: noindex
+/teacher
+  X-Robots-Tag: noindex
 /join.html
   X-Robots-Tag: noindex
+/join
+  X-Robots-Tag: noindex
 /exhibit.html
+  X-Robots-Tag: noindex
+/exhibit
   X-Robots-Tag: noindex
 /dev/*
   X-Robots-Tag: noindex
 
 /*.html
+  Cache-Control: no-cache
+/teacher
+  Cache-Control: no-cache
+/join
+  Cache-Control: no-cache
+/exhibit
   Cache-Control: no-cache
 /*.js
   Cache-Control: no-cache
