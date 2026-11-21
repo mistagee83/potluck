@@ -227,3 +227,14 @@
 **Verified**
 - Landing page at 375 px and desktop: no horizontal overflow, the hero matches the mockup.
 - `npm test` 38 pass.
+
+**Release progress (2026-11-21)**
+- Hub: rules + TTL deployed (the live rules were checked against the Hub repo before: identical), Hub functions
+  deployed, Hub `dev` and `main` pushed (`4d0eb1c`).
+- Firebase Auth: `potluck.mrandrewshub.com` authorized. Secret `PL_GEMINI_API_KEY` set by András (version 1,
+  enabled). Potluck functions deployed: 40 callables.
+- Hub admin: the five `potluck/*` price rows saved; product `potluck` (app, subscription, appUrl
+  https://potluck.mrandrewshub.com, cover = OG image) saved as a draft.
+- Landing page: hands a Hub "Open app" `#sso=` code to `/teacher.html` (tested locally); indexable now, with
+  `robots.txt` and `sitemap.xml`; the app pages and `/dev/` stay noindex (headers + meta).
+- Waiting: the Potluck `main` branch (needs András's explicit approval), then Cloudflare Pages + domain.

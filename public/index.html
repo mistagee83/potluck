@@ -2,10 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <script>
+    // The Hub's "Open app" arrives here with #sso=<code>: hand it to the teacher page, which signs the teacher in.
+    if (location.hash.startsWith('#sso=')) location.replace('/teacher.html' + location.hash);
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Potluck: group projects where everyone brings something</title>
   <meta name="description" content="Pick a classroom-tested project. AI fits it to your class. Then one board runs it all: groups claim tasks, hand in links, and you see who did what.">
-  <meta name="robots" content="noindex">
   <link rel="canonical" href="https://potluck.mrandrewshub.com/">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Potluck · Mr. Andrew's Hub">

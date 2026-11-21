@@ -1,0 +1,7 @@
+User-agent: *
+Disallow: /teacher.html
+Disallow: /join.html
+Disallow: /exhibit.html
+Disallow: /dev/
+
+Sitemap: https://potluck.mrandrewshub.com/sitemap.xml

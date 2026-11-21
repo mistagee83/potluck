@@ -1,7 +1,15 @@
-# Cloudflare Pages headers. The whole site is noindex until the Hub lists Potluck.
+# Cloudflare Pages headers. The landing page is indexed; the app pages and the developer tools are not.
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
+
+/teacher.html
+  X-Robots-Tag: noindex
+/join.html
+  X-Robots-Tag: noindex
+/exhibit.html
+  X-Robots-Tag: noindex
+/dev/*
   X-Robots-Tag: noindex
 
 /*.html
