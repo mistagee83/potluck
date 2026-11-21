@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Exhibition · Potluck</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800;900&display=swap">
+  <meta name="theme-color" content="#C4321F">
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+  <div id="app" aria-live="polite"><p class="wrap boot">Loading the exhibition.</p></div>
+  <script type="module">
+    // The public exhibition page: the link after # is the token; no sign-in.
+    import { firebase } from '/js/firebase.js';
+    import { esc, header } from '/js/ui.js';
+    const $app = document.getElementById('app');
+    const fb = firebase('exhibit');
+    const link = location.hash.slice(1);
+    window.addEventListener('hashchange', () => location.reload());
+    try {
+      const x = await fb.call('plExhibitionView', { link });
+      document.title = `${x.title} · Potluck`;
+      $app.innerHTML = `${header()}<main class="page stack">
+        <p class="muted">Exhibition</p><h1>${esc(x.title)}</h1>
+        ${x.groups.length ? `<div class="cards">${x.groups.map((g) => `<article class="box card stack"><h3>${esc(g.name)}</h3>
+          ${g.blurb ? `<p>${esc(g.blurb)}</p>` : ''}<p><a class="btn primary" href="${esc(g.link)}" target="_blank" rel="noopener noreferrer">Open their work</a></p></article>`).join('')}</div>`
+          : '<p class="muted">Nothing to show yet.</p>'}
+      </main>`;
+    } catch {
+      $app.innerHTML = `${header()}<main class="signin"><div class="box"><p>This exhibition is not available. The link may have expired.</p></div></main>`;
+    }
+  </script>
+</body>
+</html>

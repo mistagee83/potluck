@@ -65,7 +65,7 @@ P0 has the anti-guidebook; the other two come in P3.
 ## 5. Roles
 
 - **Lead teacher:** creates and tailors the project, invites co-teachers, sees everything, closes the project.
-- **Co-teacher** (decided 2026-11-21): invited by the lead teacher with a link or e-mail; signs in with their own
+- **Co-teacher** (decided 2026-11-21): invited by the lead teacher with an invitation link (no e-mail sending); signs in with their own
   Hub account (a free account is enough; inviting needs the lead teacher's Hub pass). Sees the project and the
   monitor, gives feedback per hand-in, scores with their own subject's criteria. Cannot edit the project, manage
   groups or students, or close it. Their scores are a separate column in the summary.
@@ -87,15 +87,18 @@ teachers also arrive with custom tokens). Students get no `users/{uid}` document
    week-by-week run; (2) group briefs and roles; (3) the board's tasks per phase; (4) criteria, self and peer
    questions; (5) printable handouts (optional). Input: teachers and subjects, number and size of groups, time,
    level, language, local context.
-3. **Launch:** groups (teacher assigns or students choose), project code, co-teacher invitations.
+3. **Launch:** groups (teacher assigns or students choose), a due date for every milestone (set by the teacher at
+   launch, editable later; decided 2026-11-21), project code, co-teacher invitations.
 4. **Run, without AI:** group board per phase (task, owner, status); milestones (link + reflection + who did what);
    teacher feedback per hand-in, each teacher on their own criteria; monitor: groups × milestones grid, flags for
    late or stuck groups, individual contribution.
 5. **Close:** self-assessment, anonymous in-group contribution rating, gallery round (peers score the peer
    criteria), teacher scores per teacher; AI written feedback **one call per group**, with an individual paragraph
    per member, edited and approved by the teacher; summary per group and per student; export (PDF/CSV).
-6. **Exhibition page** (decided 2026-11-21): a shareable, read-only link with the groups' products (group name,
-   nicknames, links, short description; no scores). The teacher turns it on and off. Details before P1 (section 14).
+6. **Exhibition page** (decided 2026-11-21): a shareable, read-only link with the project title, the group names and
+   each group's product link (the last link milestone) with a one-line description the group writes there; no
+   nicknames, no scores. The teacher turns it on; the link expires after 30 days (the teacher can extend it) and
+   at the latest with the 90-day deletion.
 
 ## 8. Own idea (decided 2026-11-21)
 
@@ -147,10 +150,10 @@ Collections with the `pl` prefix; rules in the Hub's `firestore.rules` (block `/
 
 `potluck.<domain>/` is the landing page for signed-out visitors; signed-in teachers go to their projects. The Meta
 ads and the Hub's "Open app" point here. Phone first, English, the Hub voice (teacher to teacher, no exclamation
-marks, no emoji), Potluck's own brand. Hero (the owner's text): title "Group projects where everyone brings
-something."; under it "Pick a classroom-tested project. AI fits it to your class. Then one board runs it all:
-groups claim tasks, hand in links, and you see who did what." Sections: hero + main button ("Start your first
-project" → Hub `/account?signup=1&return=…`), the problem, how it works in 3 steps, the templates, what students
+marks, no emoji), Potluck's own brand (section 15). Hero (design brief, 2026-11-21): title "Group projects where
+*everyone brings* something." (the phrase in tomato); under it "Pick a classroom-tested project. AI fits it to your
+class. Then one board runs it all."; main button "Pick a project" (→ the teacher page; signed out: sign-in or Hub
+`/account?signup=1&return=…`); note "No student accounts. Just a code and a nickname." Sections: hero, the problem, how it works in 3 steps, the templates, what students
 see, price, FAQ (student data), closing call to action. Pixel `ViewContent` and registration events with the
 Hub's cookie banner; OG tags.
 
@@ -162,10 +165,19 @@ Hub's cookie banner; OG tags.
 | P1 Logic without AI | One template, hand-written base plan: create project, groups, student join + approval, board, milestones, monitor, co-teacher, assessments, closing, export, exhibition page, one-active-project limit, TTL. Usable in the owner's own class |
 | P2 AI | Idea form and step 0, tailoring steps 1–5, regenerate, final feedback; credit spend in a transaction (Hub `credits.js`), price rows |
 | P3 Content | 3 templates: *5-star disaster* (short), *The anti-guidebook* (medium), *The 2050 city budget* (several weeks); template upload in Potluck's own admin |
-| P4 Publish | Brand, landing page (text, screenshots, Pixel, OG tags), address, Authorized domains, Hub `APP_ORIGINS`, Hub product, Privacy/Terms, full test on phone and desktop with non-admin and student accounts |
+| P4 Publish | Logo file and favicon, landing page (text, screenshots, Pixel, OG tags), address, Authorized domains, Hub `APP_ORIGINS`, Hub product, Privacy/Terms, full test on phone and desktop with non-admin and student accounts |
 
 ## 14. Open questions
 
-1. Exhibition page details: exactly what shows, whether the link expires (before P1).
-2. Landing page text beyond the hero (P4).
-3. Brand: logo, colours, fonts (before P4; P0 uses placeholder tokens, decided 2026-11-21).
+1. Landing page text beyond the hero (P4).
+2. Brand details the design brief leaves open: a standalone logo file and favicon; desktop layout and the teacher
+   screens are built in the brief's style, to be reviewed by András.
+
+## 15. Brand (decided 2026-11-21)
+
+"Picnic cloth + stickers": `design/POTLUCK-DESIGN.md` (rules) and the mockup in `design/` (reference). Cream page,
+red-and-white gingham header band with the "Potluck" logo sticker (tomato, rotated -3deg) and a "by Mr. Andrew's
+Hub" pill; white sticker cards with a 3px ink outline and a hard 6px ink shadow; Baloo 2 800 for display, Nunito
+for everything else; task rows: done = lettuce + filled check circle, claimed = butter + ring, open = white dashed
++ "I'll bring it". Potluck does not use the Hub's palette or fonts. Implemented in `public/css/tokens.css`,
+`base.css`, `app.css`.

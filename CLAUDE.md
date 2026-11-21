@@ -77,9 +77,11 @@ One app under Mr. Andrew's EdTech Hub.
 
 ## Brand
 
-- Placeholder until the Potluck brand exists (decided 2026-11-21): neutral tokens, a text wordmark. Raw tokens only
-  in `public/css/tokens.css`, role variables (`--c-*`) only in `public/css/base.css`, so the brand swap touches
-  tokens.css only.
+- "Picnic cloth + stickers" (2026-11-21): the rules are in `design/POTLUCK-DESIGN.md`, the mockup (zip) next to it
+  is the reference. Follow the brief for every new screen: ink outlines, hard offset shadows only on top-level
+  objects, gingham only in the header, text never directly on gingham, tomato as text only at headline size.
+- Raw tokens only in `public/css/tokens.css`, role variables (`--c-*`) only in `public/css/base.css`; page and
+  component styles in `public/css/app.css`. The header comes from `header()` in `public/js/ui.js`.
 - Hub voice in all UI text: teacher to teacher, short concrete sentences, sentence case, buttons start with a verb,
   no exclamation marks, no emoji.
 

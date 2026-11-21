@@ -378,22 +378,54 @@ service cloud.firestore {
     // ---- end Hubbaloo -----------------------------------------------------------------
 
     // ---- Potluck (D:/dev/Potluck) -----------------------------------------------------
-    // P0 skeleton, in the Potluck emulator copy only; it goes into the Hub's firestore.rules with the
-    // owner's approval (Hub repo commit + deploy from there). Students sign in with a custom token from
-    // joinProject carrying the claim plStudent (the projectId). Hub SSO teachers also arrive with a
-    // custom token, so a student is told apart by that claim, never by the sign-in provider.
+    // In the Potluck emulator copy; it goes into the Hub's firestore.rules with the owner's approval
+    // (Hub repo commit + deploy from there). Every write goes through Potluck functions (pl*), so the
+    // client only reads. Students sign in with a custom token from plJoin carrying the claims plStudent
+    // (project id) and plSid (student id). Hub SSO teachers also arrive with a custom token, so a
+    // student is told apart by that claim, never by the sign-in provider.
     function plTeacher() { return teacher() && !('plStudent' in request.auth.token); }
+    function plMember(pid) {
+      return plTeacher() && request.auth.uid in get(/databases/$(db)/documents/plProjects/$(pid)).data.members;
+    }
+    function plStudentOf(pid) { return signedIn() && request.auth.token.plStudent == pid; }
+    function plMyGroup(pid) {
+      return get(/databases/$(db)/documents/plProjects/$(pid)/students/$(request.auth.token.plSid)).data.groupId;
+    }
 
     // Templates: shared ones (owner == '') for every teacher, a teacher's own ones for that teacher.
-    // Only Potluck functions write (the app's own admin goes through them).
     match /plTemplates/{id} {
       allow read: if plTeacher() && (resource.data.owner == '' || resource.data.owner == request.auth.uid);
       allow write: if false;
     }
-    // Projects and everything under them: rules come in P1 (lead teacher, co-teachers, students).
-    match /plProjects/{document=**} {
-      allow read, write: if false;
+    // A project: its teachers (lead + co-teachers in members) and its students read it.
+    match /plProjects/{pid} {
+      allow read: if (plTeacher() && request.auth.uid in resource.data.members) || plStudentOf(pid);
+      allow write: if false;
+      match /groups/{gid} {
+        allow read: if plMember(pid) || plStudentOf(pid);
+      }
+      match /students/{sid} {
+        allow read: if plMember(pid) || plStudentOf(pid);
+      }
+      match /joinRequests/{rid} {
+        allow read: if plMember(pid);
+      }
+      // A student reads only their own group's board and hand-ins (queries filter by groupId).
+      match /tasks/{tid} {
+        allow read: if plMember(pid) || (plStudentOf(pid) && resource.data.groupId == plMyGroup(pid));
+      }
+      match /submissions/{subId} {
+        allow read: if plMember(pid) || (plStudentOf(pid) && resource.data.groupId == plMyGroup(pid));
+      }
+      // Contribution ratings are anonymous: a student reads only what they wrote.
+      match /assessments/{aid} {
+        allow read: if plMember(pid) || (plStudentOf(pid) && resource.data.rater == request.auth.token.plSid);
+      }
     }
+    // Function-only: join codes, devices, invitation and exhibition hashes.
+    match /plCodes/{code} { allow read, write: if false; }
+    match /plDevices/{id} { allow read, write: if false; }
+    match /plSecrets/{pid} { allow read, write: if false; }
     // ---- end Potluck ------------------------------------------------------------------
   }
 }

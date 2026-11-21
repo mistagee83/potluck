@@ -1,29 +1,32 @@
-/* Potluck raw design tokens. PLACEHOLDER palette (decision 2026-11-21): neutral and temporary, until the
-   Potluck brand is made (before P4, with the landing page). Role variables (--c-*) live only in base.css;
-   pages never use raw tokens, so the brand swap touches this file only. */
+/* Potluck raw design tokens: "Picnic cloth + stickers" (design/POTLUCK-DESIGN.md, 2026-11-21).
+   Potluck has its own look (not the Hub's palette or fonts). Role variables (--c-*) live only in base.css;
+   pages never use raw tokens. Fonts: Baloo 2 (600-800) and Nunito (400-900) from Google Fonts. */
 :root {
-  --pl-ink-900: #1d2430;
-  --pl-ink-600: #4a5466;
-  --pl-ink-400: #7d8798;
-  --pl-paper-50: #fbfaf7;
-  --pl-paper-100: #f3f1ec;
-  --pl-line-200: #dedad2;
-  --pl-white: #ffffff;
+  --pl-cream: #FFF8EC;       /* page background, small pills */
+  --pl-white: #FFFFFF;       /* card background, open task row */
+  --pl-ink: #3B2A20;         /* text, every outline, every shadow */
+  --pl-ink-soft: #5A463A;    /* secondary text */
+  --pl-tomato: #C4321F;      /* brand: logo sticker, primary button, highlighted words (white text passes) */
+  --pl-tomato-deep: #8F2315; /* links, small red text on light backgrounds */
+  --pl-lettuce: #BFE3A8;     /* task row: done */
+  --pl-butter: #FFE9B8;      /* task row: claimed */
+  --pl-honey: #FFD98A;       /* group pill, small tags */
+  --pl-blush: #FBE1DC;       /* error panel background (tomato-deep text) */
+  --pl-gingham: rgba(196, 50, 31, 0.55);
 
-  --pl-accent-600: #c2410c;
-  --pl-accent-700: #9a3412;
-  --pl-accent-50: #fff4ed;
+  --pl-font-display: 'Baloo 2', system-ui, sans-serif;
+  --pl-font-body: Nunito, system-ui, sans-serif;
 
-  --pl-ok-bg: #e7f5ec;
-  --pl-ok-ink: #17643a;
-  --pl-danger-bg: #fdecec;
-  --pl-danger-ink: #9b1c1c;
-
-  --pl-font-display: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --pl-font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-
-  --pl-radius-sm: 8px;
-  --pl-radius-md: 14px;
+  --pl-line: 3px;
+  --pl-line-thin: 2px;
+  --pl-radius-card: 20px;
+  --pl-radius-button: 16px;
+  --pl-radius-logo: 14px;
+  --pl-radius-row: 14px;
+  --pl-radius-small: 12px;
   --pl-radius-pill: 999px;
-  --pl-space: 16px;
+  --pl-shadow-card: 6px 6px 0 var(--pl-ink);
+  --pl-shadow-button: 4px 4px 0 var(--pl-ink);
+  --pl-shadow-pressed: 2px 2px 0 var(--pl-ink);
+  --pl-space: 22px;
 }
