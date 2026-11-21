@@ -1,0 +1,14 @@
+{
+  "name": "potluck-functions",
+  "private": true,
+  "description": "Potluck - Cloud Functions (codebase: potluck)",
+  "type": "module",
+  "main": "index.js",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "logs": "firebase functions:log"
+  },
+  "dependencies": {}
+}

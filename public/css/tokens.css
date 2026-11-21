@@ -1,0 +1,29 @@
+/* Potluck raw design tokens. PLACEHOLDER palette (decision 2026-11-21): neutral and temporary, until the
+   Potluck brand is made (before P4, with the landing page). Role variables (--c-*) live only in base.css;
+   pages never use raw tokens, so the brand swap touches this file only. */
+:root {
+  --pl-ink-900: #1d2430;
+  --pl-ink-600: #4a5466;
+  --pl-ink-400: #7d8798;
+  --pl-paper-50: #fbfaf7;
+  --pl-paper-100: #f3f1ec;
+  --pl-line-200: #dedad2;
+  --pl-white: #ffffff;
+
+  --pl-accent-600: #c2410c;
+  --pl-accent-700: #9a3412;
+  --pl-accent-50: #fff4ed;
+
+  --pl-ok-bg: #e7f5ec;
+  --pl-ok-ink: #17643a;
+  --pl-danger-bg: #fdecec;
+  --pl-danger-ink: #9b1c1c;
+
+  --pl-font-display: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --pl-font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  --pl-radius-sm: 8px;
+  --pl-radius-md: 14px;
+  --pl-radius-pill: 999px;
+  --pl-space: 16px;
+}

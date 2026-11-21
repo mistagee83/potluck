@@ -1,0 +1,17 @@
+{
+  "name": "potluck",
+  "private": true,
+  "type": "module",
+  "description": "Potluck: group projects where everyone brings something. Dev tooling only; the front end has no framework and no bundler.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "serve": "node scripts/serve.mjs",
+    "build:web": "node scripts/build-web.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "sync:hub": "node scripts/sync-hub.mjs",
+    "sync:engines": "node scripts/sync-engines.mjs",
+    "emulators": "npm run sync:engines && firebase emulators:start --only auth,firestore,functions"
+  }
+}
