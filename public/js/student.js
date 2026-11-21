@@ -229,7 +229,8 @@ function handinsView(readOnly = false) {
 
 function briefView() {
   const sk = S.p.skeleton; const b = sk.basics;
-  return `<div class="box stack"><p class="dq">${esc(b.drivingQuestion)}</p><p>${esc(b.brief)}</p>
+  const angle = sk.groups.briefs.find((x) => x.id === S.groups.find((g) => g.id === S.student?.groupId)?.briefId);
+  return `<div class="box stack"><p class="dq">${esc(b.drivingQuestion)}</p><p>${esc(b.brief)}</p>${angle ? `<p class="feedback"><strong>Your angle: ${esc(angle.title)}.</strong> ${esc(angle.brief)}</p>` : ''}
       <p><strong>What you make:</strong> ${esc(b.product.description)}</p><p><strong>For whom:</strong> ${esc(b.audience)}</p></div>
     <h2>Roles</h2><ul>${sk.roles.map((r) => `<li><strong>${esc(r.name)}</strong>${r.optional ? ' (in larger groups)' : ''}: ${esc(r.responsibility)}</li>`).join('')}</ul>
     <h2>How you are assessed</h2><ul>${sk.assessment.criteria.map((c) => `<li><strong>${esc(c.name)}</strong>: ${esc(c.levels.find((l) => l.score === 4)?.descriptor)}</li>`).join('')}</ul>

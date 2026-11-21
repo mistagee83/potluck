@@ -14,7 +14,8 @@ import { firebase, USE_EMULATORS } from './firebase.js';
 import { publicBaseUrl, HUB_ACCOUNT_URL } from './config.js';
 import { TT } from './text.js';
 import { esc, t, fmtDay, fmtDate, markdown, drafts, keepFocus, errorText, download, header } from './ui.js';
-import { TEMPLATES } from '/engines/templates/index.js';
+import { hasAccess } from '/engines/hub/entitlements.js';
+import { adminModule } from './admin.js';
 import * as P from '/engines/project.js';
 import { aiModule } from './teacher-ai.js';
 
@@ -27,7 +28,7 @@ const SI = { email: '', note: '', error: '', busy: false };
 const S = {
   view: 'home', projects: [], pid: null, p: null, groups: [], students: [], requests: [], tasks: [], subs: [], assess: [],
   tab: null, busy: '', error: '', flash: '', invite: null, inviteLink: '', exhibitionLink: '', summary: null, handinPhase: null,
-  credits: null, prices: {}, fbDrafts: [], fieldErrors: [],
+  credits: null, prices: {}, fbDrafts: [], fieldErrors: [], entitlements: {}, templates: [], ownTemplates: [], isAdmin: false,
 };
 const subs = { home: null, project: [], account: [] };
 
@@ -105,7 +106,15 @@ function setHash() {
 function watchAccount() {
   subs.account.forEach((u) => u());
   subs.account = [
-    onSnapshot(doc(fb.db, 'users', user.uid), (s) => { S.credits = s.data()?.credits ?? {}; render(); }, () => {}),
+    onSnapshot(doc(fb.db, 'users', user.uid), (s) => { S.credits = s.data()?.credits ?? {}; S.entitlements = s.data()?.entitlements ?? {}; render(); }, () => {}),
+    onSnapshot(query(collection(fb.db, 'plTemplates'), where('owner', '==', ''), where('status', '==', 'live')), (s) => {
+      S.templates = s.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)); render();
+    }, () => {}),
+    onSnapshot(query(collection(fb.db, 'plTemplates'), where('owner', '==', user.uid)), (s) => {
+      S.ownTemplates = s.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => b.createdAt - a.createdAt); render();
+    }, () => {}),
+    // settings/admins is readable only by Hub admins (Hub rules): a successful read shows the Admin link.
+    onSnapshot(doc(fb.db, 'settings', 'admins'), () => { S.isAdmin = true; render(); }, () => { S.isAdmin = false; }),
     onSnapshot(doc(fb.db, 'settings', 'credits'), (s) => { S.prices = s.data()?.prices ?? {}; render(); }, () => {}),
   ];
 }
@@ -160,7 +169,7 @@ const joinUrl = (code) => `${publicBaseUrl()}/join.html?code=${code}`;
 const MS_CHIP = { done: ['Handed in', 'ok'], late: ['Late', 'bad'], due: ['Due today', 'warn'], open: ['Open', ''], class: ['In class', ''] };
 
 function topbar() {
-  return header(`<span class="who">${esc(user.email ?? user.displayName ?? '')}</span><button class="link-btn" type="button" data-signout>${esc(TT.signOut)}</button>`);
+  return header(`<span class="who">${esc(user.email ?? user.displayName ?? '')}</span>${S.isAdmin ? '<button class="link-btn" type="button" data-admin>Admin</button>' : ''}<button class="link-btn" type="button" data-signout>${esc(TT.signOut)}</button>`);
 }
 
 // ---- sign-in view -------------------------------------------------------------------------------------------
@@ -193,7 +202,7 @@ function signInView() {
 }
 
 // ---- home ---------------------------------------------------------------------------------------------------
-function templateCard(tpl) {
+function templateCard(tpl, own = false) {
   const sk = tpl.skeleton; const b = sk.basics;
   const time = t(b.duration.unit === 'weeks' ? TT.weeks : TT.lessons, { n: b.duration.amount });
   const facts = [b.subjects.map((s) => s.name).join(', '), time, t(TT.ages, { min: b.level.ageMin, max: b.level.ageMax }),
@@ -203,7 +212,8 @@ function templateCard(tpl) {
     <p class="muted facts">${esc(facts.join(' · '))}</p>
     <p class="dq">${esc(b.drivingQuestion)}</p>
     <p>${esc(b.summary)}</p>
-    <button class="btn primary" type="button" data-create="${esc(tpl.slug)}" ${off()}>Start this project</button>
+    <div class="row"><button class="btn primary" type="button" data-create="${esc(tpl.id)}" ${off()}>Start this project</button>
+      ${own ? `<button class="link-btn danger" type="button" data-deltemplate="${esc(tpl.id)}" ${off()}>Delete</button>` : ''}</div>
   </article>`;
 }
 
@@ -239,7 +249,8 @@ function homeView() {
       ${closed.length ? `<details><summary>Closed projects (${closed.length})</summary><div class="list">${closed.map(projectCard).join('')}</div></details>` : ''}`
       : '<p class="muted">No projects yet. Start one from a template below.</p>'}
     <h2>Start a new project</h2>
-    <div class="cards">${TEMPLATES.map(templateCard).join('')}
+    ${S.ownTemplates.length ? `<h2>Your templates</h2><div class="cards">${S.ownTemplates.map((x) => templateCard(x, true)).join('')}</div><h2>Templates</h2>` : ''}
+    <div class="cards">${S.templates.map((x) => templateCard(x)).join('')}
       <article class="box card stack"><h3>Your own idea</h3><p>Have a project in mind? Fill in a short form; AI drafts it on the same frame as the templates, and you approve every step.</p>
         <button class="btn primary" type="button" data-newidea ${off()}>Start from my idea</button></article></div>
   </main>`;
@@ -373,6 +384,15 @@ function studentRow(s) {
   return `<li class="row student"><span>${esc(s.nickname)}</span><span class="row">${groupSelect(s)}
     ${canEdit ? `<button class="link-btn danger" type="button" data-removestudent="${esc(s.id)}" ${off()}>Remove</button>` : ''}</span></li>`;
 }
+// A group's angle (the template's group briefs), changeable by the lead teacher while the project runs.
+function angleLine(g, canEdit) {
+  const briefs = S.p.skeleton.groups.briefs;
+  if (!briefs.length) return '';
+  const cur = briefs.find((b) => b.id === g.briefId);
+  if (!canEdit) return `<p class="small"><strong>Angle:</strong> ${esc(cur?.title ?? 'none')}</p>`;
+  return `<label class="field small">Angle <select data-angle="${esc(g.id)}" ${off()}><option value="" ${cur ? '' : 'selected'}>None</option>${briefs.map((b) => `<option value="${esc(b.id)}" ${b.id === g.briefId ? 'selected' : ''}>${esc(b.title)}</option>`).join('')}</select></label>`;
+}
+
 function groupsView() {
   const canEdit = lead() && S.p.status === 'running';
   const unassigned = S.students.filter((s) => !s.groupId);
@@ -381,6 +401,7 @@ function groupsView() {
     <div class="cards">${S.groups.map((g) => `<div class="box stack">
       ${canEdit ? `<div class="row"><input type="text" maxlength="40" aria-label="Group name" data-k="rename-${esc(g.id)}" value="${esc(val(`rename-${g.id}`, g.name))}">
         <button class="btn sm" type="button" data-rename="${esc(g.id)}" ${off()}>Rename</button></div>` : `<h2>${esc(g.name)}</h2>`}
+      ${angleLine(g, canEdit)}
       <ul class="plain">${S.students.filter((s) => s.groupId === g.id).map(studentRow).join('') || '<li class="muted">No members yet.</li>'}</ul>
     </div>`).join('')}</div>
     ${canEdit ? `<div class="box row"><input type="text" maxlength="40" aria-label="New group name" placeholder="New group name" data-k="newgroup" value="${esc(val('newgroup'))}">
@@ -417,15 +438,20 @@ function handinsView() {
 }
 
 // ---- plan --------------------------------------------------------------------------------------------------
-function planView() {
-  const p = S.p; const sk = p.skeleton; const b = sk.basics;
+function planView() { return skeletonView(S.p.skeleton, S.p.due ?? {}); }
+
+/** A skeleton, readable: used by the Plan tab and by the admin's template preview. */
+function skeletonView(sk, due = {}, { print = true } = {}) {
+  const b = sk.basics; const p = { due };
   return `<div class="box stack">
       <p class="dq">${esc(b.drivingQuestion)}</p>
       <p>${esc(b.summary)}</p>
       <p><strong>Brief for the groups:</strong> ${esc(b.brief)}</p>
       <p><strong>Product:</strong> ${esc(b.product.description)}</p>
       <p><strong>Audience:</strong> ${esc(b.audience)}</p>
+      <p class="muted small">${esc(b.subjects.map((s) => s.name).join(', '))} · ${b.duration.amount} ${b.duration.unit} · ages ${b.level.ageMin}-${b.level.ageMax}${b.level.cefr ? ` · ${b.level.cefr}` : ''} · groups of ${sk.groups.sizeMin}-${sk.groups.sizeMax}</p>
     </div>
+    ${sk.groups.briefs.length ? `<h2>Angles for the groups</h2><ul>${sk.groups.briefs.map((x) => `<li><strong>${esc(x.title)}</strong>: ${esc(x.brief)}</li>`).join('')}</ul>` : ''}
     <h2>Phases</h2>
     ${sk.phases.map((ph, i) => `<details class="box" ${i === 0 ? 'open' : ''}><summary><strong>${i + 1}. ${esc(ph.title)}</strong> <span class="muted">· ${ph.lessons} lesson${ph.lessons === 1 ? '' : 's'}${p.due?.[ph.id] ? ` · due ${esc(fmtDay(p.due[ph.id]))}` : ''}</span></summary>
       <div class="stack"><p>${esc(ph.goal)}</p><ol>${ph.steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ol>
@@ -439,7 +465,7 @@ function planView() {
         ${[1, 2, 3, 4].map((n) => `<td class="small">${esc(c.levels.find((l) => l.score === n)?.descriptor)}</td>`).join('')}</tr>`).join('')}</tbody>
     </table></div>
     ${sk.handouts.length ? `<h2>Handouts</h2>${sk.handouts.map((h) => `<details class="box handout" id="ho-${esc(h.id)}"><summary><strong>${esc(h.title)}</strong></summary>
-      <div class="md">${markdown(h.body)}</div><p><button class="btn sm" type="button" data-print="ho-${esc(h.id)}">Print</button></p></details>`).join('')}` : ''}
+      <div class="md">${markdown(h.body)}</div>${print ? `<p><button class="btn sm" type="button" data-print="ho-${esc(h.id)}">Print</button></p>` : ''}</details>`).join('')}` : ''}
     <details class="box"><summary><strong>Teacher notes</strong></summary><div class="stack"><p>${esc(sk.teacherNotes.preparation)}</p>
       <ul>${sk.teacherNotes.variations.map((v) => `<li>${esc(v)}</li>`).join('')}</ul></div></details>`;
 }
@@ -472,6 +498,12 @@ function settingsView() {
         <button class="btn sm" type="button" data-exhibition="off" ${off()}>Turn off</button></p>`
         : `<p><button class="btn" type="button" data-exhibition="on" ${off()}>Turn on for 30 days</button></p>`}
     </div>` : ''}
+    <div class="box stack"><h2>Save as my template</h2>
+      <p class="muted">Keep this project’s plan, tasks and criteria as your own template and start from it next time. Only you see it.</p>
+      ${hasAccess(S.entitlements, 'potluck') ? `<div class="field"><label for="tpl-title">Template name</label><input id="tpl-title" type="text" maxlength="80" data-k="tplTitle" value="${esc(val('tplTitle', p.title))}"></div>
+        <p><button class="btn sm" type="button" data-savetemplate ${off()}>Save as my template</button></p>`
+        : `<p class="note">Own templates need a Hub pass. <a href="${esc(HUB_ACCOUNT_URL)}" target="_blank" rel="noopener">Get a Hub pass</a></p>`}
+    </div>
     ${p.status === 'running' ? `<div class="box stack"><h2>Assessment</h2><p>When the groups have presented, start the assessment: students fill in the self-assessment, rate their teammates and score the other groups' products. The board and hand-ins close.</p>
       <p><button class="btn primary" type="button" data-startassess ${off()}>Start the assessment</button></p></div>` : ''}
     ${p.status === 'assessing' ? `<div class="box stack"><h2>Close the project</h2><p>Closing stops the project code. Download the summary first: student data (nicknames, hand-ins, assessments) is deleted 90 days after closing.</p>
@@ -536,7 +568,7 @@ function summaryView() {
 function render() {
   if (user === undefined) { $app.innerHTML = `${header()}<main class="signin"><p class="muted">${esc(TT.loading)}</p></main>`; return; }
   if (user && S.view === 'project') setHash();
-  keepFocus($app, () => { $app.innerHTML = !user ? signInView() : S.view === 'project' ? projectView() : S.view === 'idea' ? `${topbar()}<main class="page stack">${errorLine()}${ai.ideaView()}</main>` : homeView(); });
+  keepFocus($app, () => { $app.innerHTML = !user ? signInView() : S.view === 'project' ? projectView() : S.view === 'idea' ? `${topbar()}<main class="page stack">${errorLine()}${ai.ideaView()}</main>` : S.view === 'admin' ? `${topbar()}<main class="page stack">${errorLine()}${flashLine()}${admin.view()}</main>` : homeView(); });
 }
 
 function printPart(id) {
@@ -553,6 +585,7 @@ function printPart(id) {
 const ai = aiModule({
   S, val, clear, act, call, render, tz, lead, openProject, closeProject, hubAccountUrl: HUB_ACCOUNT_URL,
 });
+const admin = adminModule({ S, D, val, clear, act, call, render, closeProject, skeletonView });
 
 // ---- events ------------------------------------------------------------------------------------------------
 $app.addEventListener('click', (e) => {
@@ -563,6 +596,12 @@ $app.addEventListener('click', (e) => {
   if ('reset' in d) return step(() => resetPassword($app.querySelector('[data-email]').email.value.trim()));
   if ('testteacher' in d) return step(() => testTeacherSignIn(d.testteacher));
   if (ai.onClick(d)) return;
+  if (admin.onClick(d)) return;
+  if (d.deltemplate) {
+    if (!confirm('Delete this template? Projects started from it stay as they are.')) return;
+    return act('deltemplate', () => call('plDeleteTemplate', { id: d.deltemplate }));
+  }
+  if ('savetemplate' in d) return act('savetemplate', async () => { await call('plSaveAsTemplate', { projectId: S.pid, title: val('tplTitle', S.p.title) }); clear('tplTitle'); S.flash = 'Saved. It is under Your templates on the start page.'; });
   if ('signout' in d) { closeProject(); S.view = 'home'; setHash(); return signOut(fb.auth); }
   if ('home' in d) { closeProject(); S.view = 'home'; S.error = ''; setHash(); return render(); }
   if (d.open) { S.invite = null; S.error = ''; return openProject(d.open); }
@@ -571,7 +610,7 @@ $app.addEventListener('click', (e) => {
   if ('dropinvite' in d) { S.invite = null; return render(); }
   if (d.create) {
     return act('create', async () => {
-      const { projectId } = await call('plCreateProject', { templateSlug: d.create, timeZone: tz() });
+      const { projectId } = await call('plCreateProject', { templateId: d.create, timeZone: tz() });
       openProject(projectId);
     });
   }
@@ -646,6 +685,8 @@ $app.addEventListener('change', (e) => {
   const sid = e.target.dataset?.assign;
   if (sid) act('assign', () => call('plAssignStudent', { projectId: S.pid, sid, groupId: e.target.value || null }));
   if (e.target.dataset?.k === 'gcount') render();
+  if (e.target.dataset?.angle) act('angle', () => call('plSetGroupBrief', { projectId: S.pid, groupId: e.target.dataset.angle, briefId: e.target.value || null }));
+  if ('tplfile' in (e.target.dataset ?? {})) admin.readFile(e.target);
 });
 
 $app.addEventListener('submit', (e) => {

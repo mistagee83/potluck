@@ -392,9 +392,10 @@ service cloud.firestore {
       return get(/databases/$(db)/documents/plProjects/$(pid)/students/$(request.auth.token.plSid)).data.groupId;
     }
 
-    // Templates: shared ones (owner == '') for every teacher, a teacher's own ones for that teacher.
+    // Templates: live shared ones (owner == '') for every teacher, a teacher's own ones for that teacher.
+    // Drafts and archived templates only through the admin functions.
     match /plTemplates/{id} {
-      allow read: if plTeacher() && (resource.data.owner == '' || resource.data.owner == request.auth.uid);
+      allow read: if plTeacher() && ((resource.data.owner == '' && resource.data.status == 'live') || resource.data.owner == request.auth.uid);
       allow write: if false;
     }
     // A project: its teachers (lead + co-teachers in members) and its students read it.

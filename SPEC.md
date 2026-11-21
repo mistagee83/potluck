@@ -157,9 +157,20 @@ before launch.
 
 Collections with the `pl` prefix; rules in the Hub's `firestore.rules` (block `// ---- Potluck`).
 
-- `plTemplates/{id}` – a template in the skeleton (+ meta, generation prompts, base plan); `owner` '' = shared,
+- `plTemplates/{id}` – `{ slug, title, status: draft|live|archived, owner, source: builtin|upload|project, meta
+  { tags, durationHint }, skeleton, projectId?, order, createdAt, updatedAt }`; `owner` '' = shared (doc id = slug),
   uid = a teacher's own. Written by Potluck functions only (the app's own admin goes through them; the Hub admin
-  handles payments, credits and accounts only, decided 2026-11-21).
+  handles payments, credits and accounts only, decided 2026-11-21). Teachers read live shared templates and their
+  own; drafts and archived ones only through the admin functions. Projects start from Firestore templates.
+- Groups carry `briefId`: the template's angles (`groups.briefs`) are dealt out in turn at launch; the lead teacher
+  can change a group's angle; the student sees their group's angle on the Brief tab.
+
+**Potluck admin** (P3, decided 2026-11-21) – for the Hub admins (`settings/admins.emails`, verified e-mail),
+reached from the teacher page ("Admin" in the header). Shared templates: import the built-in files
+(`engines/templates/`; new ones arrive as drafts, re-import keeps the status), upload a template JSON
+(`{ slug, meta, skeleton }` or a bare skeleton: checked against the frame, shown as a preview, saved as a draft),
+publish, unpublish, archive, order. **Own templates** need a Hub pass (decided 2026-11-21): Settings → "Save as my
+template" (a valid skeleton), at most 30 per teacher, deletable; projects started from them are unaffected.
 - `plProjects/{id}` – lead teacher, co-teachers, tailored skeleton, status (`setup`|`running`|`closed`), join code,
   `closedAt`, `deleteAt`.
 - under it: `groups/{gid}`, `students/{sid}` (nickname, group, approved devices), `joinRequests/{rid}` (functions

@@ -164,3 +164,42 @@
 - The five `potluck/*` price rows are not in the Hub's `settings/credits` yet (Hub admin, Credits tab).
 - Production: `PL_GEMINI_API_KEY` in Secret Manager, the rules block and TTL in the Hub repo, functions deploy:
   all with András's approval. Nothing deployed.
+
+## P3 – Content (2026-11-21)
+
+**Decisions (András, 2026-11-21)**
+- Templates reach the admin as a JSON file (checked, previewed, saved as a draft, then published).
+- Own templates (a project saved for later) need a Hub pass.
+- The 2050 city budget: 3 weeks, 6 lessons.
+
+**Built**
+- Templates written by hand in the skeleton, from the owner's publications, translated and made international:
+  `five-star-disaster.js` (May 2026: 2 lessons, 3 phases, 4 roles, 11 tasks, 5 criteria, euphemism toolkit and
+  brainstorm handouts; subjects Foreign language + Tourism and marketing) and `city-budget-2050.js` (January 2026:
+  3 weeks / 6 lessons, 5 phases, 4 roles, 16 tasks, 6 criteria, 4 group angles, budget worksheet with the payback
+  method, AI advisor and investor prompt cards for use outside Potluck, pitch phrases; Mathematics, Foreign
+  language, Economics). Together with the anti-guidebook: short, medium, several weeks.
+- Templates in Firestore (`functions/templates.js`): `plAdminTemplates`, `plAdminImportBuiltins`, `plAdminUpload`
+  (check or save), `plAdminSetTemplate` (status, order), `plSaveAsTemplate`, `plDeleteTemplate`; `plCreateProject`
+  now starts from a Firestore template (live shared or own). Admin check as in the Hub (verified e-mail in
+  `settings/admins.emails`). `engines/template-io.js`: reading an upload (wrapped or bare, slug from the title).
+- Group angles: groups get `briefId` at launch (in turn), `plSetGroupBrief`; shown on Plan, Groups (select) and
+  the student's Brief.
+- Teacher page: templates and "Your templates" from Firestore, delete own; "Save as my template" in Settings (Hub
+  pass, otherwise a note); "Admin" link for Hub admins (settings/admins is readable only by them) → admin view
+  (`public/js/admin.js`): import, publish/unpublish/archive/order, preview, upload (file or paste) with the error
+  list or a preview.
+- Rules (emulator copy): teachers read live shared templates and their own.
+
+**Verified**
+- `npm test`: 38 tests pass (+ templates: all three valid, sizes, 6 lessons for 2050, upload reading and errors).
+- Emulator: admin imported the three built-ins (drafts), published them, the teacher's start page lists them in
+  order; upload: broken JSON and a too-long title refused with the reason, a good copy saved as a draft. A teacher
+  who is not an admin: admin call refused, the draft not readable, a project from the draft refused, only the live
+  three listed. Started the 2050 project, launched: four groups got the four angles; an angle changed; the student
+  in that group sees "Your angle: Floating city". Saved the project as an own template, started a project from it,
+  deleted the template (the project stayed).
+
+**Not done / next**
+- P4 (publish): logo file and favicon, landing page, address, Hub `APP_ORIGINS` / product, Privacy/Terms, the
+  Hub-repo rules block and TTL, price rows, Secret Manager key, deploy. All with András's approval.

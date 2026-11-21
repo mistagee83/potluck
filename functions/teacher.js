@@ -5,7 +5,7 @@ import {
   callable, fail, fs, teacher, teacherProject, needStatus, hubPass, projectRef, secretRef, sha256, token, rand,
   now, Timestamp,
 } from './common.js';
-import { TEMPLATES } from './engines/templates/index.js';
+import { templateFor } from './templates.js';
 import { validateSkeleton } from './engines/skeleton.js';
 import { TAILOR_STEPS, launchProblems } from './engines/ai.js';
 import { inputsFromSkeleton } from './ai.js';
@@ -26,8 +26,7 @@ const subjectsOf = (p) => p.skeleton.basics.subjects.map((s) => s.name);
 /** New project from a built-in template. Without a Hub pass only one project may be active. */
 export const plCreateProject = callable(async (req) => {
   const me = teacher(req);
-  const tpl = TEMPLATES.find((t) => t.slug === req.data?.templateSlug);
-  if (!tpl) fail('not-found', 'no-template');
+  const tpl = await templateFor(me.uid, req.data?.templateId);
   const { ok } = validateSkeleton(tpl.skeleton);
   if (!ok) fail('internal', 'bad-template');
   if (!(await hubPass(me.uid))) {
@@ -44,7 +43,8 @@ export const plCreateProject = callable(async (req) => {
     coTeacherInfo: {},
     leadSubject: tpl.skeleton.basics.subjects[0].name,
     title: tpl.skeleton.basics.title,
-    templateSlug: tpl.slug,
+    templateSlug: tpl.slug || null,
+    templateId: tpl.id,
     source: 'template',
     tailor: { inputs: inputsFromSkeleton(tpl.skeleton, 4), done: TAILOR_STEPS, stale: [], proposal: null },
     skeleton: tpl.skeleton,
@@ -119,8 +119,10 @@ async function uniqueCode(pid) {
   fail('internal', 'no-code');
 }
 
+// Groups get the template's angles (groups.briefs) in turn; the teacher can change a group's angle.
+const angleFor = (skeleton, i) => (skeleton.groups.briefs.length ? skeleton.groups.briefs[i % skeleton.groups.briefs.length].id : null);
 function writeGroup(batch, pref, groupId, name, order, skeleton) {
-  batch.set(pref.collection('groups').doc(groupId), { name, order, createdAt: now() });
+  batch.set(pref.collection('groups').doc(groupId), { name, order, briefId: angleFor(skeleton, order), createdAt: now() });
   for (const t of tasksForGroup(skeleton, groupId)) {
     const { id, ...task } = t;
     batch.set(pref.collection('tasks').doc(id), { ...task, updatedAt: now() });
@@ -157,6 +159,18 @@ export const plAddGroup = callable(async (req) => {
   batch.update(ref, { nextGroup: n + 1, updatedAt: now() });
   await batch.commit();
   return { groupId: `g${n}` };
+});
+
+/** Changes a group's angle (one of the skeleton's group briefs). */
+export const plSetGroupBrief = callable(async (req) => {
+  const { p, ref } = await teacherProject(req, req.data?.projectId, 'lead');
+  needStatus(p, STATUS.running);
+  const briefId = req.data?.briefId ?? null;
+  if (briefId !== null && !p.skeleton.groups.briefs.some((b) => b.id === briefId)) fail('invalid-argument', 'bad-brief');
+  const g = ref.collection('groups').doc(String(req.data?.groupId ?? ''));
+  if (!(await g.get()).exists) fail('not-found', 'no-group');
+  await g.update({ briefId });
+  return { ok: true };
 });
 
 export const plRenameGroup = callable(async (req) => {
