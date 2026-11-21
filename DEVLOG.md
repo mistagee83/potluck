@@ -114,3 +114,53 @@
   up (both are Hub-repo changes, with András's approval). Nothing deployed.
 - Mia/Leo-style sample content in the design mockup is placeholder; teacher screens and desktop layout follow the
   brief's style but are not in the mockup.
+
+## P2 – AI (2026-11-21)
+
+**Decisions (András, 2026-11-21)**
+- Gemini key: `PL_GEMINI_API_KEY`, locally in `functions/.secret.local` (András put it there).
+- The approved final feedback is shown to the students: the group text and their own paragraph only.
+- The teacher chooses the language of the students' texts; the UI stays English.
+
+**Built**
+- `engines/ai.js`: step definitions and price keys (`from-idea`, `setup-step`, `regenerate`, `handouts`,
+  `final-feedback`), part schemas cut out of the skeleton schema, the class inputs and the idea form with checks,
+  teacher numbers applied by code (`applyInputs`), `mergePart`, `checkStep` (own errors block, other steps go
+  stale), `launchProblems`, the feedback schema and check, `toModelSchema` (nullable → type list; bounds → text).
+- `functions/llm.js`: one Interactions API call bound to a JSON schema, model `gemini-3.8-flash` (an unavailable
+  model stops with `model-unavailable`, nothing substituted), versioned prompts, a mock for the emulator.
+- `functions/credits.js`: the Hub's spend/refund pattern (copied from Hubbaloo).
+- `functions/ai.js`: `plCreateFromIdea` (step 0; the project is created only when the draft succeeded),
+  `plTailorInputs`, `plTailorStep` (proposal, optional note, one repair round), `plTailorDecide`,
+  `plFeedbackDraft`, `plFeedbackApprove`. `plLaunch` now refuses an open proposal or an invalid skeleton; closing
+  also dates the feedback collections. Template projects start with their own numbers as inputs, all steps done.
+- Prompts `functions/prompts/`: system (v2: sentence case, ids ≤ 24 characters), idea, plan, groups, tasks,
+  assessment, handouts, feedback.
+- Teacher page (`public/js/teacher-ai.js`): credit balance and prices (from `users/{uid}` and `settings/credits`),
+  "Start from my idea" form, "Fit it to your class" (inputs, steps with status Done / Not yet / Needs a new version
+  / Waiting for you, cost per button), proposal preview with Use this / Write a new version / Discard, launch
+  blockers; per group on Assess: draft feedback, edit, "Show it to the students".
+- Student page: "Feedback from your teacher" (group text + "For you") on Yourself and after closing.
+- Rules (emulator copy): `feedbackDrafts` teachers only, `feedback/{group}` that group's students,
+  `feedbackStudents/{sid}` that student only.
+
+**Verified**
+- `npm test`: 34 tests pass (skeleton 12, project 10, AI steps 12).
+- Emulator with the mock model: own idea → step 0 → steps 1-4, credits 30 → 20; changing the time made the plan
+  "needs a new version" and launching was refused; a new plan cost 1 credit (regenerate).
+- Emulator with the real model (`gemini-3.8-flash`, András's key): own idea (a greener-school podcast, Biology +
+  English, 6 lessons, B2) → step 0 (one repair round: an id was too long) → plan, groups, tasks, assessment,
+  handouts, all usable on the first try after the schema fix; launched; two students, hand-ins, ratings, scores;
+  feedback drafted, edited, approved. 40 → 28 credits (2 + 5 × 2; the failed call was refunded). Calls used about
+  1,200-4,300 tokens each.
+- Found and fixed with the real model: Title Case titles (prompt v2), the full bounds schema was refused by
+  Gemini ("too many states") for the tasks part (bounds now sent as text), refusal details were dropped on the
+  client (field errors now shown).
+- Rules: a student reads the group feedback and their own paragraph; a teammate's paragraph and the draft are
+  refused. The student page shows the approved feedback (375 px).
+
+**Not done / next**
+- Saving a finished project as the teacher's own template (SPEC 8): not built; fits P3 with template upload.
+- The five `potluck/*` price rows are not in the Hub's `settings/credits` yet (Hub admin, Credits tab).
+- Production: `PL_GEMINI_API_KEY` in Secret Manager, the rules block and TTL in the Hub repo, functions deploy:
+  all with András's approval. Nothing deployed.

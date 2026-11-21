@@ -91,6 +91,9 @@ One app under Mr. Andrew's EdTech Hub.
 - Teacher page: http://localhost:5175/teacher.html (with the emulators running it shows the test-teacher button)
 - Emulators: `npm run emulators` (auth, firestore, functions; needs the Firebase CLI)
 - Unit tests: `npm test` (`node:test`, no dependencies)
+- Model in the emulator: a mock by default (free). For real calls put `PL_MOCK_MODEL=false` in
+  `functions/.env.local` (gitignored) and restart the emulators; the key is in `functions/.secret.local`. Remove
+  the line afterwards. Model calls are logged as `pl-model` lines (step, attempt, tokens).
 - Hub shared modules: `npm run sync:hub` copies the Hub's `shared/entitlements.js`, `credits.js` into
   `engines/hub/` and `sso.js` into `public/js/hub/` (`--check` only reports); never edit the copies.
 - Copy engines into functions/: `npm run sync:engines` (automatic before a functions deploy)

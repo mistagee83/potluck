@@ -417,6 +417,16 @@ service cloud.firestore {
       match /submissions/{subId} {
         allow read: if plMember(pid) || (plStudentOf(pid) && resource.data.groupId == plMyGroup(pid));
       }
+      // Final feedback: drafts only for the teachers; approved texts for the group and the one student.
+      match /feedbackDrafts/{gid} {
+        allow read: if plMember(pid);
+      }
+      match /feedback/{gid} {
+        allow read: if plMember(pid) || (plStudentOf(pid) && gid == plMyGroup(pid));
+      }
+      match /feedbackStudents/{sid} {
+        allow read: if plMember(pid) || (plStudentOf(pid) && sid == request.auth.token.plSid);
+      }
       // Contribution ratings are anonymous: a student reads only what they wrote.
       match /assessments/{aid} {
         allow read: if plMember(pid) || (plStudentOf(pid) && resource.data.rater == request.auth.token.plSid);

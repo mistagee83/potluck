@@ -16,6 +16,7 @@ import { TT } from './text.js';
 import { esc, t, fmtDay, fmtDate, markdown, drafts, keepFocus, errorText, download, header } from './ui.js';
 import { TEMPLATES } from '/engines/templates/index.js';
 import * as P from '/engines/project.js';
+import { aiModule } from './teacher-ai.js';
 
 const $app = document.getElementById('app');
 const fb = firebase();
@@ -26,8 +27,9 @@ const SI = { email: '', note: '', error: '', busy: false };
 const S = {
   view: 'home', projects: [], pid: null, p: null, groups: [], students: [], requests: [], tasks: [], subs: [], assess: [],
   tab: null, busy: '', error: '', flash: '', invite: null, inviteLink: '', exhibitionLink: '', summary: null, handinPhase: null,
+  credits: null, prices: {}, fbDrafts: [], fieldErrors: [],
 };
-const subs = { home: null, project: [] };
+const subs = { home: null, project: [], account: [] };
 
 // ---- sign-in: one Hub account for every app (Hub spec "Egy fiók, közös belépés") -------------------
 const REDIRECT_INSTEAD = ['auth/popup-blocked', 'auth/operation-not-supported-in-this-environment'];
@@ -100,6 +102,14 @@ function setHash() {
 }
 
 // ---- data -------------------------------------------------------------------------------------------------
+function watchAccount() {
+  subs.account.forEach((u) => u());
+  subs.account = [
+    onSnapshot(doc(fb.db, 'users', user.uid), (s) => { S.credits = s.data()?.credits ?? {}; render(); }, () => {}),
+    onSnapshot(doc(fb.db, 'settings', 'credits'), (s) => { S.prices = s.data()?.prices ?? {}; render(); }, () => {}),
+  ];
+}
+
 function watchHome() {
   subs.home?.();
   subs.home = onSnapshot(query(collection(fb.db, 'plProjects'), where('members', 'array-contains', user.uid)), (snap) => {
@@ -110,7 +120,7 @@ function watchHome() {
 
 function closeProject() {
   subs.project.forEach((u) => u()); subs.project = [];
-  Object.assign(S, { pid: null, p: null, groups: [], students: [], requests: [], tasks: [], subs: [], assess: [], tab: null,
+  Object.assign(S, { pid: null, p: null, groups: [], students: [], requests: [], tasks: [], subs: [], assess: [], tab: null, fbDrafts: [], fieldErrors: [],
     inviteLink: '', exhibitionLink: '', summary: null, handinPhase: null });
 }
 
@@ -133,6 +143,7 @@ function openProject(pid, tab = null) {
   sub('tasks', collection(pref, 'tasks'), 'tasks', (a, b) => a.order - b.order);
   sub('subs', collection(pref, 'submissions'), 'subs');
   sub('assess', collection(pref, 'assessments'), 'assess');
+  sub('fbDrafts', collection(pref, 'feedbackDrafts'), 'fbDrafts');
   render();
 }
 
@@ -228,7 +239,9 @@ function homeView() {
       ${closed.length ? `<details><summary>Closed projects (${closed.length})</summary><div class="list">${closed.map(projectCard).join('')}</div></details>` : ''}`
       : '<p class="muted">No projects yet. Start one from a template below.</p>'}
     <h2>Start a new project</h2>
-    <div class="cards">${TEMPLATES.map(templateCard).join('')}</div>
+    <div class="cards">${TEMPLATES.map(templateCard).join('')}
+      <article class="box card stack"><h3>Your own idea</h3><p>Have a project in mind? Fill in a short form; AI drafts it on the same frame as the templates, and you approve every step.</p>
+        <button class="btn primary" type="button" data-newidea ${off()}>Start from my idea</button></article></div>
   </main>`;
 }
 
@@ -282,9 +295,11 @@ function setupView() {
   const p = S.p; const sk = p.skeleton;
   if (!lead()) return '<p class="muted">The lead teacher is setting up this project.</p>';
   const subjects = sk.basics.subjects.map((s) => s.name);
+  const aiPart = ai.tailorSection();
+  if (!sk.phases.length) return aiPart;
   const count = Math.max(1, Math.min(12, Number(val('gcount', p.groupNames.length)) || 1));
   const names = Array.from({ length: count }, (_, i) => val(`gname-${i}`, p.groupNames[i] ?? `Team ${i + 1}`));
-  return `<div class="box stack">
+  return `${aiPart}<div class="box stack">
       <h2>The project</h2>
       <div class="field"><label for="title">Title</label><input id="title" type="text" maxlength="80" data-k="title" value="${esc(val('title', p.title))}"></div>
       ${subjects.length > 1 ? `<div class="field"><label for="lead-subject">Your subject</label><select id="lead-subject" data-k="leadSubject">${subjects.map((s) => `<option ${val('leadSubject', p.leadSubject) === s ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select></div>` : ''}
@@ -486,7 +501,7 @@ function assessView() {
           ${c.levels.map((l) => `<label class="check"><input type="radio" name="sc-${esc(g.id)}-${esc(c.id)}" value="${l.score}" data-k="sc-${esc(g.id)}-${esc(c.id)}" ${String(val(`sc-${g.id}-${c.id}`, mine?.scores?.[c.id] ?? '')) === String(l.score) ? 'checked' : ''}> <strong>${l.score}</strong> ${esc(l.descriptor)}</label>`).join('')}
         </fieldset>`).join('')}
         <div class="field"><label for="cm-${esc(g.id)}">Comment for the group</label><textarea id="cm-${esc(g.id)}" rows="2" maxlength="600" data-k="cm-${esc(g.id)}">${esc(val(`cm-${g.id}`, mine?.comment ?? ''))}</textarea></div>
-        <p><button class="btn" type="button" data-score="${esc(g.id)}" ${off()}>Save the scores</button></p></div>`;
+        <p><button class="btn" type="button" data-score="${esc(g.id)}" ${off()}>Save the scores</button></p>${ai.feedbackSection(g)}</div>`;
     }).join('')}`;
 }
 
@@ -521,7 +536,7 @@ function summaryView() {
 function render() {
   if (user === undefined) { $app.innerHTML = `${header()}<main class="signin"><p class="muted">${esc(TT.loading)}</p></main>`; return; }
   if (user && S.view === 'project') setHash();
-  keepFocus($app, () => { $app.innerHTML = !user ? signInView() : S.view === 'project' ? projectView() : homeView(); });
+  keepFocus($app, () => { $app.innerHTML = !user ? signInView() : S.view === 'project' ? projectView() : S.view === 'idea' ? `${topbar()}<main class="page stack">${errorLine()}${ai.ideaView()}</main>` : homeView(); });
 }
 
 function printPart(id) {
@@ -534,6 +549,11 @@ function printPart(id) {
   window.print();
 }
 
+// ---- AI parts (teacher-ai.js) ------------------------------------------------------------------------
+const ai = aiModule({
+  S, val, clear, act, call, render, tz, lead, openProject, closeProject, hubAccountUrl: HUB_ACCOUNT_URL,
+});
+
 // ---- events ------------------------------------------------------------------------------------------------
 $app.addEventListener('click', (e) => {
   const el = e.target.closest('button');
@@ -542,6 +562,7 @@ $app.addEventListener('click', (e) => {
   if ('google' in d) return step(googleSignIn);
   if ('reset' in d) return step(() => resetPassword($app.querySelector('[data-email]').email.value.trim()));
   if ('testteacher' in d) return step(() => testTeacherSignIn(d.testteacher));
+  if (ai.onClick(d)) return;
   if ('signout' in d) { closeProject(); S.view = 'home'; setHash(); return signOut(fb.auth); }
   if ('home' in d) { closeProject(); S.view = 'home'; S.error = ''; setHash(); return render(); }
   if (d.open) { S.invite = null; S.error = ''; return openProject(d.open); }
@@ -645,9 +666,11 @@ onAuthStateChanged(fb.auth, async (u) => {
   if (!next && ssoPending && await ssoPending) return;
   user = next;
   subs.home?.(); subs.home = null;
+  subs.account.forEach((u) => u()); subs.account = [];
   if (!user) { closeProject(); S.view = 'home'; render(); return; }
   SI.email = ''; SI.note = ''; SI.error = '';
   watchHome();
+  watchAccount();
   const h = readHash();
   if (h.invite) { history.replaceState(null, '', location.pathname); loadInvite(h.invite); }
   if (h.p) openProject(h.p, h.tab); else render();

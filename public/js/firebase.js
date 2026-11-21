@@ -34,6 +34,7 @@ export function firebase(name = '[DEFAULT]') {
     } catch (e) {
       const err = new Error(e.message);
       err.code = String(e.code ?? 'unknown').replace(/^functions\//, '');
+      err.details = e.details ?? null;
       err.reason = e.details?.reason
         ?? (err.code === 'deadline-exceeded' ? 'timeout' : err.code === 'unavailable' || err.code === 'internal' ? 'network' : 'unknown');
       throw err;

@@ -7,6 +7,8 @@ import {
 } from './common.js';
 import { TEMPLATES } from './engines/templates/index.js';
 import { validateSkeleton } from './engines/skeleton.js';
+import { TAILOR_STEPS, launchProblems } from './engines/ai.js';
+import { inputsFromSkeleton } from './ai.js';
 import {
   STATUS, GROUP_MODES, LIMITS, DAY, RETENTION_DAYS, EXHIBITION_DAYS, DATE_RE, makeCode, cleanText,
   defaultGroupNames, tasksForGroup, linkMilestones, criteriaFor, summarize, summaryCsv,
@@ -43,6 +45,8 @@ export const plCreateProject = callable(async (req) => {
     leadSubject: tpl.skeleton.basics.subjects[0].name,
     title: tpl.skeleton.basics.title,
     templateSlug: tpl.slug,
+    source: 'template',
+    tailor: { inputs: inputsFromSkeleton(tpl.skeleton, 4), done: TAILOR_STEPS, stale: [], proposal: null },
     skeleton: tpl.skeleton,
     status: STATUS.setup,
     groupMode: 'teacher',
@@ -127,6 +131,9 @@ function writeGroup(batch, pref, groupId, name, order, skeleton) {
 export const plLaunch = callable(async (req) => {
   const { p, ref, id } = await teacherProject(req, req.data?.projectId, 'lead');
   needStatus(p, STATUS.setup);
+  if (p.tailor?.proposal) fail('failed-precondition', 'proposal-open');
+  const problems = launchProblems(p.skeleton);
+  if (Object.keys(problems).length) fail('failed-precondition', 'plan-incomplete', { steps: Object.keys(problems) });
   const missing = linkMilestones(p.skeleton).filter((ph) => !p.due?.[ph.id]);
   if (missing.length) fail('failed-precondition', 'due-missing', { phases: missing.map((x) => x.id) });
   const code = await uniqueCode(id);
@@ -268,7 +275,7 @@ export const plCloseProject = callable(async (req) => {
   const closedAt = now();
   const deleteAt = Timestamp.fromMillis(closedAt + RETENTION_DAYS * DAY);
   const writer = fs().bulkWriter();
-  for (const col of ['groups', 'students', 'joinRequests', 'tasks', 'submissions', 'assessments']) {
+  for (const col of ['groups', 'students', 'joinRequests', 'tasks', 'submissions', 'assessments', 'feedbackDrafts', 'feedback', 'feedbackStudents']) {
     const docs = await ref.collection(col).get();
     docs.forEach((d) => writer.update(d.ref, { deleteAt }));
   }

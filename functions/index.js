@@ -8,3 +8,6 @@ export {
 export {
   plJoin, plJoinStatus, plLeaveDevice, plChooseGroup, plTask, plSubmit, plAssess, plGallery, plExhibitionView,
 } from './student.js';
+export {
+  plCreateFromIdea, plTailorInputs, plTailorStep, plTailorDecide, plFeedbackDraft, plFeedbackApprove,
+} from './ai.js';

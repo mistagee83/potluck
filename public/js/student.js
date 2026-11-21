@@ -30,7 +30,7 @@ function deviceId() {
 let me; // undefined: not known, null: signed out, { pid, sid }
 const S = {
   pending: JSON.parse(store.get('pl:pending') || 'null'), denied: false,
-  p: null, student: null, students: [], groups: [], tasks: [], subs: [], mine: [], gallery: null,
+  p: null, student: null, students: [], groups: [], tasks: [], subs: [], mine: [], gallery: null, fbGroup: null, fbMine: null,
   tab: null, phase: null, busy: '', error: '', flash: '',
 };
 const subs = { base: [], group: [] };
@@ -69,7 +69,7 @@ function poll() {
 // ---- data -------------------------------------------------------------------------------------------------
 function stopAll() {
   [...subs.base, ...subs.group].forEach((u) => u()); subs.base = []; subs.group = [];
-  Object.assign(S, { p: null, student: null, students: [], groups: [], tasks: [], subs: [], mine: [], gallery: null });
+  Object.assign(S, { p: null, student: null, students: [], groups: [], tasks: [], subs: [], mine: [], gallery: null, fbGroup: null, fbMine: null });
 }
 const list = (snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 const fail = (e) => { S.error = errorText(e); render(); };
@@ -88,14 +88,16 @@ function watch() {
   subs.base.push(onSnapshot(collection(pref, 'students'), (s) => { S.students = list(s); render(); }, fail));
   subs.base.push(onSnapshot(collection(pref, 'groups'), (s) => { S.groups = list(s).sort((a, b) => a.order - b.order); render(); }, fail));
   subs.base.push(onSnapshot(query(collection(pref, 'assessments'), where('rater', '==', me.sid)), (s) => { S.mine = list(s); render(); }, fail));
+  subs.base.push(onSnapshot(doc(pref, 'feedbackStudents', me.sid), (s) => { S.fbMine = s.exists() ? s.data() : null; render(); }, () => {}));
 }
 function watchGroup() {
-  subs.group.forEach((u) => u()); subs.group = []; S.tasks = []; S.subs = [];
+  subs.group.forEach((u) => u()); subs.group = []; S.tasks = []; S.subs = []; S.fbGroup = null;
   const gid = S.student?.groupId;
   if (!gid) return;
   const pref = doc(fb.db, 'plProjects', me.pid);
   subs.group.push(onSnapshot(query(collection(pref, 'tasks'), where('groupId', '==', gid)), (s) => { S.tasks = list(s).sort((a, b) => a.order - b.order); render(); }, fail));
   subs.group.push(onSnapshot(query(collection(pref, 'submissions'), where('groupId', '==', gid)), (s) => { S.subs = list(s); render(); }, fail));
+  subs.group.push(onSnapshot(doc(pref, 'feedback', gid), (s) => { S.fbGroup = s.exists() ? s.data() : null; render(); }, () => {}));
 }
 
 // ---- pieces -----------------------------------------------------------------------------------------------
@@ -234,6 +236,12 @@ function briefView() {
     ${sk.handouts.filter((h) => h.for !== 'teacher').map((h) => `<details class="box"><summary><strong>${esc(h.title)}</strong></summary><div class="md">${markdown(h.body)}</div></details>`).join('')}`;
 }
 
+// The teacher's approved written feedback: the group text and this student's own paragraph.
+function feedbackView() {
+  if (!S.fbGroup && !S.fbMine) return '';
+  return `<div class="box stack"><h2>Feedback from your teacher</h2>${S.fbGroup ? `<p>${esc(S.fbGroup.text)}</p>` : ''}${S.fbMine ? `<p class="feedback"><strong>For you:</strong> ${esc(S.fbMine.text)}</p>` : ''}</div>`;
+}
+
 function selfView() {
   const a = S.p.skeleton.assessment;
   const done = S.mine.find((x) => x.kind === 'self');
@@ -271,13 +279,13 @@ function galleryView() {
 
 function inView() {
   const p = S.p;
-  if (p.status === 'closed') return frame('<div class="box"><p>This project is closed. Thank you for taking part.</p></div>');
+  if (p.status === 'closed') return frame(`${feedbackView()}<div class="box"><p>This project is closed. Thank you for taking part.</p></div>`);
   if (!S.student?.groupId) return chooseView();
   if (p.status === 'assessing') {
     const tabs = [['self', 'Yourself'], ['team', 'Teammates'], ['gallery', 'Gallery'], ['handins', 'Hand-ins']];
     if (!tabs.some(([k]) => k === S.tab)) S.tab = 'self';
     const views = { self: selfView, team: teammatesView, gallery: galleryView, handins: () => handinsView(true) };
-    return frame(views[S.tab](), tabs);
+    return frame(`${S.tab === 'self' ? feedbackView() : ''}${views[S.tab]()}`, tabs);
   }
   const tabs = [['board', 'Board'], ['handins', 'Hand-ins'], ['brief', 'Brief']];
   if (!tabs.some(([k]) => k === S.tab)) S.tab = 'board';

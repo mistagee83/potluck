@@ -86,7 +86,8 @@ teachers also arrive with custom tokens). Students get no `users/{uid}` document
 2. **Tailor with AI**, each step approved or regenerated on its own: (1) project plan: phases, lesson-by-lesson or
    week-by-week run; (2) group briefs and roles; (3) the board's tasks per phase; (4) criteria, self and peer
    questions; (5) printable handouts (optional). Input: teachers and subjects, number and size of groups, time,
-   level, language, local context.
+   level, language, local context. The language is the teacher's choice (decided 2026-11-21): the texts students
+   read are written in it, the UI stays English. How the steps work: section 9a.
 3. **Launch:** groups (teacher assigns or students choose), a due date for every milestone (set by the teacher at
    launch, editable later; decided 2026-11-21), project code, co-teacher invitations.
 4. **Run, without AI:** group board per phase (task, owner, status); milestones (link + reflection + who did what);
@@ -94,7 +95,8 @@ teachers also arrive with custom tokens). Students get no `users/{uid}` document
    late or stuck groups, individual contribution.
 5. **Close:** self-assessment, anonymous in-group contribution rating, gallery round (peers score the peer
    criteria), teacher scores per teacher; AI written feedback **one call per group**, with an individual paragraph
-   per member, edited and approved by the teacher; summary per group and per student; export (PDF/CSV).
+   per member, edited and approved by the teacher; once approved, each student sees the group text and their own
+   paragraph, never a teammate's (decided 2026-11-21); summary per group and per student; export (PDF/CSV).
 6. **Exhibition page** (decided 2026-11-21): a shareable, read-only link with the project title, the group names and
    each group's product link (the last link milestone) with a one-line description the group writes there; no
    nicknames, no scores. The teacher turns it on; the link expires after 30 days (the teacher can extend it) and
@@ -108,6 +110,24 @@ age/level, duration, number and size of groups, 1–3 required content items or 
 Step 0 (AI) fills the skeleton from it as a draft template (phases, milestones, roles); the teacher approves or
 regenerates, then the same steps 1–5 run as for a template. An own idea has no hand-written base plan, so it cannot
 start without AI. A finished project can be saved as the teacher's own template (only theirs).
+
+## 9a. How the AI steps work (P2, 2026-11-21)
+
+- Code: `engines/ai.js` (pure: step parts, inputs, merge, checks, the feedback schema), `functions/ai.js`
+  (callables), `functions/llm.js` (the call, prompts, mock), prompts in `functions/prompts/*.md` (versioned).
+- Each step has a part schema cut out of `SKELETON_SCHEMA`; the model fills only that part. The teacher's numbers
+  (subjects, group size, time, ages, level, language) are written into the skeleton by code, never by the model.
+- Order of a call: spend credits (Hub pattern, `creditLedger`) → model → shape check → merge → `checkStep`; one
+  repair round with the errors; on failure the credits go back. The result waits as a proposal: the teacher uses
+  it, asks for a new version (with an optional note), or discards it.
+- A step whose output no longer fits (new numbers, a new plan with new phase ids) is marked "needs a new version";
+  launching needs the whole skeleton valid (`launchProblems`).
+- The model gets a light schema: bounds (lengths, list sizes, ranges) are sent as text hints, because the full
+  bounds were too large for Gemini's constrained decoding; our checks enforce them.
+- Secret: `PL_GEMINI_API_KEY` (Secret Manager in production; `functions/.secret.local` for the emulator). The
+  emulator uses a mock model unless `PL_MOCK_MODEL=false` (e.g. in `functions/.env.local`, gitignored).
+- Final feedback: `feedbackDrafts/{group}` (teachers only) → approved texts in `feedback/{group}` (the group's
+  students read it) and `feedbackStudents/{sid}` (only that student). All get `deleteAt` at closing.
 
 ## 9. Access and credits (decided 2026-11-21)
 
