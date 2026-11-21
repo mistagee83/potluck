@@ -38,7 +38,7 @@ András's approval. "Chrome" = in András's own Chrome, signed in (decided 2026-
     `node scripts/build-web.mjs`, output directory `dist`.
 11. Custom domain `potluck.mrandrewshub.com` on the project (Cloudflare adds the DNS record).
 
-## F. Go live (done 2026-11-21 except step 14: the Hub product is still a draft)
+## F. Go live (done 2026-11-21; the Hub product is live)
 
 12. Potluck `main` = `dev` (merge or push), with `noindex` removed from `public/index.html` and `public/_headers`
     (the landing page only; app pages stay noindex).

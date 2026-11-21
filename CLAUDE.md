@@ -25,7 +25,8 @@ One app under Mr. Andrew's EdTech Hub.
 
 ## Branches and deploys
 
-- All work happens on the `dev` branch. `main` is production (Cloudflare Pages, once set up): every push to `main`
+- All work happens on the `dev` branch. `main` is production (Cloudflare Pages project `potluck`, live at
+  https://potluck.mrandrewshub.com since 2026-11-21): every push to `main`
   goes live. Never commit to, push to, or merge into `main` without András's explicit approval.
 - No Netlify. Testing happens locally and on the live address, which is noindex until the Hub lists Potluck.
 

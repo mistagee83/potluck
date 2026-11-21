@@ -248,3 +248,9 @@
   the monitor showed "Handed in" and 1/11 live.
 - Not yet: the Hub product is still a draft (publishing it lists Potluck on the Hub); an AI step with real
   credits not run live; the live test project is still open (András can close it, or keep it as a demo).
+- Hub product `potluck` published (András's approval): https://mrandrewshub.com/p/potluck. "Open app" there opens
+  Potluck signed in (Hub SSO code → landing → teacher page), tested live.
+
+**P4 status**: Potluck is live and listed on the Hub. Open: an AI step with real credits and a phone test on the
+live address (not run here), Google sign-in directly on Potluck (not run here), the open test project "Live
+test: 5-star disaster".
