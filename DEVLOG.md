@@ -277,4 +277,6 @@ Archive, Account (+ Admin). SPEC 7a.
   Admin import + publish, project from a template, launch: the Projects card shows "Next hand-in".
 - Not tested: the co-teacher invitation link through the new routes (the code path is unchanged: `#invite=` is
   read at sign-in), the live address.
-
+- Live 2026-11-22 (András's approval): `dev` pushed, `main` fast-forwarded to `992c50f` and pushed; Cloudflare Pages
+  serves the new `teacher.js` and `app.css` (checked with curl); the signed-out live page loads without console
+  errors. Not checked: the signed-in menu on the live address (needs András's sign-in).
