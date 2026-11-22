@@ -301,3 +301,23 @@ Archive, Account (+ Admin). SPEC 7a.
   No sideways scroll at 375px.
 - Not tested: refusal after launch (the callable needs status setup; the button is on Setup only), co-teacher
   scoring with edited subjects, the live address.
+
+## Hub security audit K-7 (2026-11-22)
+
+**Decisions (András, 2026-11-22)**
+- A project with student data that nobody uses for 180 days is closed automatically; the usual 90 days follow.
+
+**Done (code, not deployed)**
+- Joining: at most 20 wrong codes an hour from one network address (`plLimits`, function-only, Hub TTL);
+  at most 60 students in a project (`LIMITS.studentsPerProject`). New refusals: `too-many-tries`, `project-full`.
+- Removing a student ends their sign-in (`revokeRefreshTokens`); the Hub's rules also check that the student
+  record exists (`plStudentOf`).
+- `plCleanup` (daily, `functions/cleanup.js`): closes idle projects (`closedBy: 'idle'`), same code as the
+  teacher's closing.
+- Deleting a teacher's account in the Hub admin deletes their projects and templates (Hub `functions/user-data.js`).
+
+**Not done**
+- No e-mail before an idle project is closed (Potluck sends no e-mail). No way for the teacher to stop new
+  joins by hand. App Check waits for its own session (Hub audit K-5).
+- Deploy order: Hub `firestore:rules` + `firestore:indexes`, then `functions:potluck`, then `main` (the two new
+  messages in `public/js/ui.js`).

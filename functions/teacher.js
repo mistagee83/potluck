@@ -3,7 +3,7 @@
 import { FieldValue } from 'firebase-admin/firestore';
 import {
   callable, fail, fs, teacher, teacherProject, needStatus, hubPass, projectRef, secretRef, sha256, token, rand,
-  now, Timestamp,
+  now, Timestamp, auth, studentUid,
 } from './common.js';
 import { templateFor } from './templates.js';
 import { validateSkeleton } from './engines/skeleton.js';
@@ -219,6 +219,9 @@ export const plRemoveStudent = callable(async (req) => {
   batch.delete(sref);
   batch.delete(fs().doc(`plDevices/${id}_${sid}`));
   await batch.commit();
+  // The removed student's sign-in ends too (Hub security audit K-7): no new ID tokens for that account.
+  // (The Hub's rules also check that the student record exists, so the current token reads nothing.)
+  await auth().revokeRefreshTokens(studentUid(id, sid)).catch(() => {}); // never signed in: no account
   return { ok: true };
 });
 
@@ -286,6 +289,11 @@ export const plTeacherScore = callable(async (req) => {
 export const plCloseProject = callable(async (req) => {
   const { p, ref, id } = await teacherProject(req, req.data?.projectId, 'lead');
   needStatus(p, STATUS.assessing);
+  return closeProject(ref, p, id);
+});
+
+/** The closing itself; also used by the daily clean-up for projects left idle (cleanup.js). */
+export async function closeProject(ref, p, id, extra = {}) {
   const closedAt = now();
   const deleteAt = Timestamp.fromMillis(closedAt + RETENTION_DAYS * DAY);
   const writer = fs().bulkWriter();
@@ -296,10 +304,10 @@ export const plCloseProject = callable(async (req) => {
   const devices = await fs().collection('plDevices').where('projectId', '==', id).get();
   devices.forEach((d) => writer.delete(d.ref));
   if (p.code) writer.delete(fs().doc(`plCodes/${p.code}`));
-  writer.update(ref, { status: STATUS.closed, closedAt, deleteAt, code: null, updatedAt: closedAt });
+  writer.update(ref, { status: STATUS.closed, closedAt, deleteAt, code: null, updatedAt: closedAt, ...extra });
   await writer.close();
   return { deleteAt: deleteAt.toMillis() };
-});
+}
 
 // ---- co-teachers -----------------------------------------------------------------------------------------
 

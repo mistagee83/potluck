@@ -14,3 +14,5 @@ export {
 export {
   plAdminTemplates, plAdminImportBuiltins, plAdminUpload, plAdminSetTemplate, plSaveAsTemplate, plDeleteTemplate,
 } from './templates.js';
+// The one scheduled function: closes projects left idle for 180 days (Hub security audit K-7).
+export { plCleanup } from './cleanup.js';

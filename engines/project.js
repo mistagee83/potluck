@@ -11,7 +11,27 @@ export const EXHIBITION_DAYS = 30;
 export const LIMITS = Object.freeze({
   nickname: [2, 20], groupName: 40, groups: [1, 12], link: 500, reflection: 600, blurb: 160,
   taskTitle: 80, comment: 600, answer: 400, projectTitle: 80, ownTasksPerGroup: 40,
+  // Hub security audit 2026-11-22, K-7: a join code must not let anyone fill a project with students.
+  studentsPerProject: 60,
 });
+
+// Hub security audit 2026-11-22, K-7.
+/** Wrong join codes one network address may try in an hour (a class shares one address; guessing does not). */
+export const BAD_CODES_PER_HOUR = 20;
+/** A running project nobody touches for this long is closed automatically (then the 90 days run). */
+export const IDLE_CLOSE_DAYS = 180;
+
+/** The last time anything happened in a project (ms): its own changes and every group's last activity. */
+export function lastActive(p) {
+  const times = [p?.updatedAt, p?.launchedAt, p?.assessingAt, p?.createdAt, ...Object.values(p?.lastActivity ?? {})];
+  return Math.max(0, ...times.filter((t) => Number.isFinite(t)));
+}
+/** A project with student data (running or assessing) that has been idle for IDLE_CLOSE_DAYS. */
+export function idleTooLong(p, now) {
+  if (![STATUS.running, STATUS.assessing].includes(p?.status)) return false;
+  const last = lastActive(p);
+  return last > 0 && now - last > IDLE_CLOSE_DAYS * DAY;
+}
 
 // ---- codes and names --------------------------------------------------------------------------------
 

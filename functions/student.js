@@ -2,11 +2,11 @@
 // the board, hand-ins, self/contribution/peer assessment, the gallery. Plus the public exhibition page.
 import { FieldValue } from 'firebase-admin/firestore';
 import {
-  callable, fail, fs, studentProject, needStatus, projectRef, secretRef, sha256, now, studentToken,
+  callable, fail, fs, studentProject, needStatus, projectRef, secretRef, sha256, now, studentToken, Timestamp,
 } from './common.js';
 import {
   STATUS, TASK_STATUS, LIMITS, normalizeCode, CODE_RE, cleanNickname, nicknameKey, nicknameError, cleanLink,
-  cleanText, productPhase,
+  cleanText, productPhase, BAD_CODES_PER_HOUR,
 } from './engines/project.js';
 
 const DEVICE_RE = /^[A-Za-z0-9_-]{16,100}$/;
@@ -18,6 +18,17 @@ const str = (v, max) => {
   return t;
 };
 const devRef = (pid, sid) => fs().doc(`plDevices/${pid}_${sid}`);
+
+// The caller's address: Google appends the real client address as the LAST X-Forwarded-For entry (the
+// start can be written by the client). Kept only as a salted hash, per hour, in plLimits (function-only;
+// the Hub's Firestore TTL on expiresAt removes the rows).
+function badCodeRef(req) {
+  const xff = req.rawRequest?.headers?.['x-forwarded-for'];
+  const ip = String(Array.isArray(xff) ? xff.join(',') : xff ?? '').split(',').map((s) => s.trim()).filter(Boolean).pop()
+    || req.rawRequest?.ip || 'unknown';
+  const hour = new Date(now()).toISOString().slice(0, 13);
+  return fs().doc(`plLimits/code-${sha256(`${hour}|${ip}`).slice(0, 40)}`);
+}
 
 // ---- join -----------------------------------------------------------------------------------------------
 
@@ -33,13 +44,21 @@ export const plJoin = callable(async (req) => {
   if (nickError) fail('invalid-argument', nickError);
   const deviceId = String(req.data?.deviceId ?? '');
   if (!DEVICE_RE.test(deviceId)) fail('invalid-argument', 'bad-device');
+  // Guessing codes (Hub security audit K-7): after BAD_CODES_PER_HOUR wrong codes from one address, that
+  // address waits until the next hour. Right codes are not counted, so a whole class can join from one network.
+  const tries = badCodeRef(req);
+  if (((await tries.get()).data()?.count ?? 0) >= BAD_CODES_PER_HOUR) fail('resource-exhausted', 'too-many-tries');
   const cs = await fs().doc(`plCodes/${code}`).get();
-  if (!cs.exists) fail('not-found', 'bad-code');
+  if (!cs.exists) {
+    await tries.set({ count: FieldValue.increment(1), expiresAt: Timestamp.fromMillis(now() + 2 * 3600 * 1000) }, { merge: true });
+    fail('not-found', 'bad-code');
+  }
   const pid = cs.data().projectId;
   const pref = projectRef(pid);
   const nickname = cleanNickname(req.data.nickname);
   const key = nicknameKey(nickname);
   const deviceHash = sha256(deviceId);
+  const joined = (await pref.collection('students').count().get()).data().count;
 
   const result = await fs().runTransaction(async (tx) => {
     const ps = await tx.get(pref);
@@ -48,6 +67,7 @@ export const plJoin = callable(async (req) => {
     const found = await tx.get(pref.collection('students').where('key', '==', key).limit(1));
     if (found.empty) {
       if (ps.data().status !== STATUS.running) fail('failed-precondition', 'joining-closed');
+      if (joined >= LIMITS.studentsPerProject) fail('resource-exhausted', 'project-full');
       const sref = pref.collection('students').doc();
       tx.set(sref, { nickname, key, groupId: null, joinedAt: now() });
       tx.set(devRef(pid, sref.id), { projectId: pid, sid: sref.id, devices: [deviceHash] });

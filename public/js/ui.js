@@ -80,6 +80,8 @@ export const ERRORS = {
   'nickname-chars': 'Use letters, numbers, spaces, dots, dashes or underscores.',
   'joining-closed': 'This project does not take new students any more.',
   'too-many-requests': 'Your teacher has several requests from you already. Wait for them.',
+  'too-many-tries': 'Too many wrong codes from here. Check the code on the board and try again in an hour.',
+  'project-full': 'This project is full. Tell your teacher.',
   'bad-link': 'This is not a working link. Copy the share link of your work (it starts with https://).',
   'no-contributors': 'Tick who worked on this.',
   'answer-missing': 'Answer every question.',

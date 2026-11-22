@@ -106,3 +106,24 @@ test('summary: teacher means, weighted percent, peers, contribution, self', () =
 test('CSV quoting and formula guard', () => {
   assert.equal(P.toCsv([['a,b', 'say "hi"', '=SUM(A1)', null]]), '"a,b","say ""hi""",\'=SUM(A1),\r\n');
 });
+
+// Hub security audit 2026-11-22, K-7: idle projects.
+import { lastActive, idleTooLong, IDLE_CLOSE_DAYS, BAD_CODES_PER_HOUR } from '../engines/project.js';
+test('idle projects: only running or assessing ones, after 180 days without any activity', () => {
+  const D = 24 * 60 * 60 * 1000;
+  const now = 1_800_000_000_000;
+  assert.equal(IDLE_CLOSE_DAYS, 180);
+  assert.equal(P.LIMITS.studentsPerProject, 60);
+  assert.equal(BAD_CODES_PER_HOUR, 20);
+  const old = now - 181 * D;
+  assert.equal(lastActive({ updatedAt: 5, launchedAt: 9, lastActivity: { g1: 7, g2: 30 } }), 30);
+  assert.equal(idleTooLong({ status: 'running', updatedAt: old, launchedAt: old }, now), true);
+  assert.equal(idleTooLong({ status: 'assessing', updatedAt: old }, now), true);
+  // a group still working keeps the project open
+  assert.equal(idleTooLong({ status: 'running', updatedAt: old, lastActivity: { g1: now - 3 * D } }, now), false);
+  assert.equal(idleTooLong({ status: 'running', updatedAt: now - 179 * D }, now), false);
+  // projects without student data, or already closed, are left alone
+  assert.equal(idleTooLong({ status: 'setup', updatedAt: old }, now), false);
+  assert.equal(idleTooLong({ status: 'closed', updatedAt: old }, now), false);
+  assert.equal(idleTooLong({ status: 'running' }, now), false);
+});
