@@ -80,7 +80,7 @@ export function aiModule(ctx) {
     const area = (k, label, rows = 2, hint = '') => `<div class="field"><label for="idea-${k}">${label}</label>${hint ? `<span class="muted small">${hint}</span>` : ''}
       <textarea id="idea-${k}" rows="${rows}" maxlength="${IDEA_FIELDS[k]}" data-k="idea-${k}">${esc(val(`idea-${k}`))}</textarea></div>`;
     return `<h1>Start from <span class="hl">your idea</span></h1>
-      <p class="muted">Fill in what you know; AI drafts the plan on Potluck’s project frame, and you approve or change every step.</p>
+      <p class="muted">Fill in what you know. AI drafts the plan, and you approve or change each step.</p>
       ${creditsLine()}
       <div class="box stack"><h2>The idea</h2>
         ${area('challenge', 'The challenge or driving question', 2, 'For example: what does a new student from abroad really need to know?')}
@@ -173,7 +173,7 @@ export function aiModule(ctx) {
     const missing = Object.keys(problems);
     return `<div class="box stack">
       <h2>Fit it to <span class="hl">your class</span></h2>
-      <p class="muted">${S.p.source === 'idea' ? 'Run the steps in order; you approve each one.' : 'The template works as it is. To fit it to your class, give your numbers and let AI rewrite the steps you want.'}</p>
+      <p class="muted">${S.p.source === 'idea' ? 'Run the steps in order. You approve each one.' : 'The template works as it is. To fit it to your class, give your numbers and let AI rewrite the steps you want.'}</p>
       ${creditsLine()}
       <details ${S.p.source === 'idea' || S.openInputs ? 'open' : ''}><summary>Your class: subjects, groups, time, level, language</summary>
         <div class="stack">${inputsFields('ti-', t.inputs)}${fieldErrors()}
@@ -205,7 +205,7 @@ export function aiModule(ctx) {
     const levelLabel = ['1 (lowest)', '2', '3', '4 (highest)'];
     return `<div class="box stack" id="crit-edit">
       <h2>Edit the criteria</h2>
-      <p class="muted">Free, before launch. ${CRIT_MIN}-${CRIT_MAX} criteria; every level needs a description. At least one criterion is scored by peers: the other groups score it in the gallery round. Each teacher scores the criteria of their own subject; "All subjects" is scored by the lead teacher.</p>
+      <p class="muted">Free, before launch. ${CRIT_MIN}-${CRIT_MAX} criteria; every level needs a description. At least one criterion is scored by the other groups in the gallery round. Each teacher scores the criteria of their own subject; "All subjects" is scored by the lead teacher.</p>
       ${rows.map((c, i) => `<fieldset class="crit-edit stack"><legend>Criterion ${i + 1}</legend>
         <div class="field"><label for="ce-${i}-name">Name</label><input id="ce-${i}-name" type="text" maxlength="60" data-ce="${i}.name" value="${esc(c.name)}"></div>
         <div class="grid2">

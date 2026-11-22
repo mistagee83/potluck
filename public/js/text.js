@@ -20,7 +20,6 @@ export const TT = {
   signOut: 'Sign out',
   loading: 'Loading',
   templatesTitle: 'Templates',
-  templatesLead: 'Projects are not ready yet. These are the built-in templates the app starts from.',
   lessons: '{n} lessons',
   weeks: '{n} weeks',
   ages: 'ages {min}-{max}',

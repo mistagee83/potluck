@@ -106,7 +106,7 @@ export const ERRORS = {
   'generation-failed': 'The AI could not write a usable version. Your credits were given back. Try again, or say what you want differently.',
   'bad-input': 'Check the fields marked below.',
   'proposal-open': 'Use or discard the waiting version first.',
-  'plan-incomplete': 'Some steps still need work before you can launch: see Fit it to your class.',
+  'plan-incomplete': 'Some steps still need work before you can launch. See Fit it to your class.',
   'idea-first': 'Approve the draft from your idea first.',
   'no-proposal': 'There is nothing waiting.',
   'no-members': 'This group has no members.',
@@ -120,7 +120,7 @@ export const ERRORS = {
   'hub-pass-template': 'Own templates need a Hub pass.',
   'too-many-templates': 'You have 30 templates. Delete one first.',
   'bad-brief': 'Choose one of the angles.',
-  'assessment-first': 'Write the assessment step first: the criteria come with it.',
+  'assessment-first': 'Write the assessment step first. The criteria are part of it.',
   network: 'No connection. Check the internet and try again.',
   timeout: 'This took too long. Try again.',
 };

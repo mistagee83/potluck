@@ -322,7 +322,7 @@ function projectsView() {
   return `${errorLine()}${inviteCard()}
     <div class="row head"><h1>Your projects</h1>${active.length ? '<a class="btn primary sm" href="#/new">New project</a>' : ''}</div>
     ${active.length ? `<div class="list">${active.map(projectCard).join('')}</div>`
-      : `<div class="box stack"><h2>No running projects</h2><p>Pick a classroom-tested template, or start from your own idea.</p>
+      : `<div class="box stack"><h2>No running projects</h2><p>Pick a ready-made template, or start from your own idea.</p>
         <p><a class="btn primary" href="#/new">Start a new project</a></p></div>`}
     ${closedCount ? `<p class="muted small">${closedCount} closed project${closedCount === 1 ? '' : 's'} in the <a href="#/archive">Archive</a>.</p>` : ''}`;
 }
@@ -332,9 +332,9 @@ function newView() {
   const choice = (href, title, text, go) => `<a class="box card choice" href="${href}"><h3>${title}</h3><p>${text}</p><span class="choice-go">${go}</span></a>`;
   return `${errorLine()}<h1>Start a new project</h1>
     <div class="cards">
-      ${choice('#/new/templates', 'From a template', `${S.templates.length} classroom-tested project${S.templates.length === 1 ? '' : 's'}. AI fits the one you pick to your class.`, 'See the templates')}
+      ${choice('#/new/templates', 'From a template', `${S.templates.length} ready-made project${S.templates.length === 1 ? '' : 's'}. AI adjusts the one you pick to your class.`, 'See the templates')}
       ${choice('#/templates', 'From my templates', own ? `${own} project${own === 1 ? '' : 's'} you saved as your own template.` : 'Projects you saved as your own template. You have none yet.', 'See my templates')}
-      ${choice('#/new/idea', 'From my idea', 'Have a project in mind? Fill in a short form; AI drafts it on the same frame as the templates, and you approve every step.', 'Start from my idea')}
+      ${choice('#/new/idea', 'From my idea', 'Describe your idea in a short form. AI drafts the plan in the same structure as the templates, and you approve each step.', 'Start from my idea')}
     </div>`;
 }
 
@@ -369,7 +369,7 @@ function accountView() {
       <p><button class="btn" type="button" data-signout>${esc(TT.signOut)}</button></p></div>
     <div class="box stack"><h2>Credits and Hub pass</h2>
       <p><strong>${b.unlimited ? 'Unlimited credits' : `${b.total} credit${b.total === 1 ? '' : 's'}`}</strong> <span class="muted">· AI steps use credits: fitting a project to your class and the written feedback at the end.</span></p>
-      <p>${pass ? 'Hub pass: active. You can run several projects at once, invite co-teachers and save your own templates.'
+      <p>${pass ? 'Your Hub pass is active. You can run several projects at once, invite co-teachers and save your own templates.'
         : 'No Hub pass. You can run one project at a time; co-teachers, own templates and export need a Hub pass.'}</p>
       <p><a class="btn" href="${esc(HUB_ACCOUNT_URL)}" target="_blank" rel="noopener">Open your Hub account</a></p></div>`;
 }
@@ -442,7 +442,7 @@ function setupView() {
     </div>
     <div class="box stack">
       <h2>Due dates</h2>
-      <p class="muted">Every hand-in needs a date: the monitor shows a group as late after it. You can change the dates later.</p>
+      <p class="muted">Every hand-in needs a date. After that date the monitor shows the group as late. You can change the dates later.</p>
       <div class="grid2">${dueFields(sk.phases)}</div>
     </div>
     <div class="row">

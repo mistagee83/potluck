@@ -128,12 +128,12 @@ function joinView() {
   return `${header()}<main class="signin">
     <form class="box signin-card" data-join novalidate>
       <h1>Join your project</h1>
-      <p class="signin-lead">Type the code your teacher shows and a nickname your group will know you by. No e-mail, no password.</p>
+      <p class="signin-lead">Type the code your teacher shows and a nickname your group will know you by. You don't need an e-mail address or a password.</p>
       ${S.denied ? '<p class="error" role="alert">Your teacher did not let this device in. Ask your teacher.</p>' : ''}${errorLine()}
       <div class="field"><label for="code">Project code</label><input id="code" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="8" data-k="code" value="${esc(code)}"></div>
       <div class="field"><label for="nickname">Nickname</label><input id="nickname" type="text" autocomplete="nickname" maxlength="20" data-k="nickname" value="${esc(val('nickname'))}"></div>
       <button class="btn primary" type="submit" ${off()}>Join</button>
-      <p class="muted small">Joined before on another phone or computer? Use the same nickname: your teacher lets this device in.</p>
+      <p class="muted small">Joined before on another phone or computer? Use the same nickname, and your teacher will let this device in.</p>
     </form>
   </main>`;
 }
@@ -147,7 +147,7 @@ function pendingView() {
 }
 
 function chooseView() {
-  if (S.p.groupMode !== 'choose') return frame('<div class="box"><p>You are in. Your teacher puts you in a group soon: this page updates by itself.</p></div>');
+  if (S.p.groupMode !== 'choose') return frame('<div class="box"><p>You are in. Your teacher will put you in a group soon. This page updates by itself.</p></div>');
   return frame(`<div class="box stack"><h2>Choose your group</h2>
     ${S.groups.map((g) => {
       const members = S.students.filter((s) => s.groupId === g.id).map((s) => s.nickname);
