@@ -322,7 +322,7 @@ function projectsView() {
   return `${errorLine()}${inviteCard()}
     <div class="row head"><h1>Your projects</h1>${active.length ? '<a class="btn primary sm" href="#/new">New project</a>' : ''}</div>
     ${active.length ? `<div class="list">${active.map(projectCard).join('')}</div>`
-      : `<div class="box stack"><h2>No running projects</h2><p>Pick a ready-made template, or start from your own idea.</p>
+      : `<div class="box stack"><h2>No running projects</h2><p>Pick a classroom-tested template, or start from your own idea.</p>
         <p><a class="btn primary" href="#/new">Start a new project</a></p></div>`}
     ${closedCount ? `<p class="muted small">${closedCount} closed project${closedCount === 1 ? '' : 's'} in the <a href="#/archive">Archive</a>.</p>` : ''}`;
 }
@@ -332,7 +332,7 @@ function newView() {
   const choice = (href, title, text, go) => `<a class="box card choice" href="${href}"><h3>${title}</h3><p>${text}</p><span class="choice-go">${go}</span></a>`;
   return `${errorLine()}<h1>Start a new project</h1>
     <div class="cards">
-      ${choice('#/new/templates', 'From a template', `${S.templates.length} ready-made project${S.templates.length === 1 ? '' : 's'}. AI adjusts the one you pick to your class.`, 'See the templates')}
+      ${choice('#/new/templates', 'From a template', `${S.templates.length} classroom-tested project${S.templates.length === 1 ? '' : 's'}. AI adjusts the one you pick to your class.`, 'See the templates')}
       ${choice('#/templates', 'From my templates', own ? `${own} project${own === 1 ? '' : 's'} you saved as your own template.` : 'Projects you saved as your own template. You have none yet.', 'See my templates')}
       ${choice('#/new/idea', 'From my idea', 'Describe your idea in a short form. AI drafts the plan in the same structure as the templates, and you approve each step.', 'Start from my idea')}
     </div>`;
