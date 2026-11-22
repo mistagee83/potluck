@@ -1,7 +1,10 @@
 # Cloudflare Pages headers. The landing page is indexed; the app pages and the developer tools are not.
+# Hub security audit 2026-11-22, K-6: other sites cannot put these pages in a frame (clickjacking).
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: SAMEORIGIN
+  Content-Security-Policy: frame-ancestors 'self'
 
 /teacher.html
   X-Robots-Tag: noindex
