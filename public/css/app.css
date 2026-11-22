@@ -4,6 +4,57 @@
 .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .row.head { justify-content: space-between; }
 
+/* teacher main menu: a bottom bar on phones, a left column from 900px (teacher.js nav()) */
+.shell { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+.side {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+  background: var(--c-surface); border-top: var(--pl-line) solid var(--c-line);
+  padding: 4px 4px calc(4px + env(safe-area-inset-bottom));
+}
+.side ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 2px; }
+.side li { flex: 1 1 0; min-width: 0; }
+.side a {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  min-height: 58px; padding: 4px 2px; border-radius: var(--pl-radius-small);
+  color: var(--c-text); text-decoration: none; text-align: center; font: 800 11px/1.15 var(--pl-font-body);
+}
+.side a:hover { color: var(--c-text); }
+.side a[aria-current="page"] { background: var(--c-text); color: var(--c-surface); }
+.side svg { width: 22px; height: 22px; flex-shrink: 0; }
+.side-sub { display: none; }
+body:has(.side) .cookie-banner { bottom: calc(84px + env(safe-area-inset-bottom)); }
+
+/* new-project choices: whole cards are links */
+a.choice, a.choice:hover { color: inherit; text-decoration: none; }
+a.choice:active { transform: translate(2px, 2px); box-shadow: var(--pl-shadow-pressed); }
+.choice-go { font-weight: 900; color: var(--c-accent-ink); text-decoration: underline; }
+
+@media (min-width: 900px) {
+  .shell {
+    display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 28px;
+    max-width: 1260px; margin: 0 auto; padding: 0 var(--pl-space);
+  }
+  .shell > .page { margin: 0; padding-left: 0; padding-right: 0; max-width: 980px; width: 100%; }
+  .side { position: sticky; top: 0; align-self: start; background: none; border: 0; padding: 26px 0; }
+  .side ul { flex-direction: column; gap: 6px; }
+  .side a {
+    flex-direction: row; justify-content: flex-start; gap: 10px; min-height: 44px; padding: 8px 14px;
+    border: var(--pl-line-thin) solid transparent; border-radius: var(--pl-radius-pill); font-size: 15px; text-align: left;
+  }
+  .side a:not([aria-current]):hover { background: var(--c-surface); border-color: var(--c-line); }
+  .side-sub { display: grid; gap: 2px; margin: 8px 0 6px 24px; padding-left: 12px; border-left: var(--pl-line-thin) dashed var(--c-line); }
+  .side-title { font-size: 13px; font-weight: 900; color: var(--c-text-muted); padding: 0 10px 4px; overflow-wrap: anywhere; }
+  .side-sub button {
+    text-align: left; min-height: 36px; padding: 4px 10px; cursor: pointer;
+    background: none; border: var(--pl-line-thin) solid transparent; border-radius: var(--pl-radius-pill);
+    font: 800 14px var(--pl-font-body); color: var(--c-text);
+  }
+  .side-sub button:hover { border-color: var(--c-line); background: var(--c-surface); }
+  .side-sub button[aria-current="page"] { background: var(--c-claimed); border-color: var(--c-line); }
+  .tabs.proj-tabs { display: none; }
+  body:has(.side) .cookie-banner { bottom: 12px; }
+}
+
 /* sign-in and join */
 .signin { max-width: 440px; margin: 0 auto; padding: 26px var(--pl-space) 48px; display: grid; gap: 18px; }
 .signin-card { display: grid; gap: 14px; }
@@ -103,7 +154,8 @@ details.box > .stack, details.box > .md { margin-top: 12px; }
 }
 
 @media print {
-  .topbar, .tabs, .no-print, .banner, .code-box, [data-home] { display: none !important; }
+  .topbar, .tabs, .side, .no-print, .banner, .code-box, [data-home] { display: none !important; }
+  .shell { display: block; padding: 0; }
   .box, .table-wrap { box-shadow: none; }
   /* Printing one part (a handout, the summary): everything else is hidden, the part moves to the top. */
   body.print-one * { visibility: hidden; }

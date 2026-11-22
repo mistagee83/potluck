@@ -1,5 +1,5 @@
 // Potluck teacher page: sign-in with the Mr. Andrew's Hub account (Google or e-mail; one click from the Hub
-// with #sso=<code>), projects, setup and launch, the monitor, groups and join requests, hand-ins and
+// with #sso=<code>), the main menu (Projects, New project, Templates, Archive, Account), setup and launch, the monitor, groups and join requests, hand-ins and
 // feedback, the plan, assessment, the summary and export, co-teachers and the exhibition page.
 // Reads are live Firestore listeners (rules: the project's members); every write is a pl* callable.
 import {
@@ -15,6 +15,7 @@ import { publicBaseUrl, HUB_ACCOUNT_URL } from './config.js';
 import { TT } from './text.js';
 import { esc, t, fmtDay, fmtDate, markdown, drafts, keepFocus, errorText, download, header } from './ui.js';
 import { hasAccess } from '/engines/hub/entitlements.js';
+import { balance } from '/engines/hub/credits.js';
 import { adminModule } from './admin.js';
 import { initConsent, track } from './pixel.js';
 import * as P from '/engines/project.js';
@@ -27,7 +28,7 @@ const { D, val, clear } = drafts($app);
 let user; // undefined: not known yet, null: signed out
 const SI = { email: '', note: '', error: '', busy: false };
 const S = {
-  view: 'home', projects: [], pid: null, p: null, groups: [], students: [], requests: [], tasks: [], subs: [], assess: [],
+  view: 'projects', projects: [], pid: null, p: null, groups: [], students: [], requests: [], tasks: [], subs: [], assess: [],
   tab: null, busy: '', error: '', flash: '', invite: null, inviteLink: '', exhibitionLink: '', summary: null, handinPhase: null,
   credits: null, prices: {}, fbDrafts: [], fieldErrors: [], entitlements: {}, templates: [], ownTemplates: [], isAdmin: false,
 };
@@ -93,15 +94,51 @@ const off = () => (S.busy ? 'disabled' : '');
 const call = (fn, data) => fb.call(fn, data);
 const tz = () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
-// ---- routing: #p=<projectId>&tab=<tab>, #invite=<token> ----------------------------------------------------
-function readHash() {
-  const h = new URLSearchParams(location.hash.slice(1));
-  return { p: h.get('p'), tab: h.get('tab'), invite: h.get('invite') };
+// ---- routing ----------------------------------------------------------------------------------------------
+// #/projects, #/new, #/new/templates, #/new/idea, #/templates, #/archive, #/account, #/admin, #/p/<id>/<tab>.
+// Older links still work: #p=<projectId>&tab=<tab>; #invite=<token> is the co-teacher invitation.
+const VIEWS = ['projects', 'new', 'templates', 'archive', 'account', 'admin'];
+function parseRoute(hash = location.hash) {
+  const raw = hash.slice(1);
+  if (raw.startsWith('/')) {
+    const [a = '', b = '', c = ''] = raw.slice(1).split('/').map((x) => { try { return decodeURIComponent(x); } catch { return ''; } });
+    if (a === 'p' && b) return { view: 'project', pid: b, tab: c || null };
+    if (a === 'new' && b === 'idea') return { view: 'idea' };
+    if (a === 'new' && b === 'templates') return { view: 'newTemplates' };
+    return { view: VIEWS.includes(a) ? a : 'projects' };
+  }
+  const h = new URLSearchParams(raw);
+  if (h.get('p')) return { view: 'project', pid: h.get('p'), tab: h.get('tab') };
+  return { view: 'projects', invite: h.get('invite') };
 }
+const projectHash = (pid, tab) => `#/p/${encodeURIComponent(pid)}${tab ? `/${tab}` : ''}`;
+function hashFor() {
+  if (S.view === 'project' && S.pid) return projectHash(S.pid, S.tab);
+  return { idea: '#/new/idea', newTemplates: '#/new/templates' }[S.view] ?? `#/${S.view}`;
+}
+/** Keeps the address in step with the view without a new history entry (tab switches, corrections). */
 function setHash() {
-  const h = S.pid ? `#p=${S.pid}${S.tab ? `&tab=${S.tab}` : ''}` : '';
+  const h = hashFor();
   if (location.hash !== h) history.replaceState(null, '', `${location.pathname}${location.search}${h}`);
 }
+/** Goes to a route with a history entry, so the browser's Back button returns. */
+function go(hash) {
+  if (location.hash === hash) applyRoute(parseRoute(hash)); else location.hash = hash;
+}
+function applyRoute(r) {
+  S.error = ''; S.flash = '';
+  if (r.view === 'project') {
+    if (S.pid === r.pid) { if (!S.p || tabsFor(S.p).includes(r.tab)) S.tab = r.tab ?? S.tab; setHash(); render(); } else openProject(r.pid, r.tab);
+  } else {
+    if (S.pid) closeProject();
+    S.view = r.view;
+    if (r.view === 'idea') S.fieldErrors = [];
+    if (r.view === 'admin') admin.open();
+    setHash(); render();
+  }
+  window.scrollTo(0, 0);
+}
+window.addEventListener('hashchange', () => { if (user) applyRoute(parseRoute()); });
 
 // ---- data -------------------------------------------------------------------------------------------------
 function watchAccount() {
@@ -140,12 +177,14 @@ function openProject(pid, tab = null) {
   const pref = doc(fb.db, 'plProjects', pid);
   const list = (snap) => snap.docs.map((d) => ({ id: d.id, ...d.data() }));
   const fail = (e) => { S.error = errorText(e); render(); };
+  // A project that does not exist or is not yours (an old or mistyped link): back to Projects with a note.
+  const gone = () => { closeProject(); S.view = 'projects'; setHash(); S.error = 'This project is not available.'; render(); };
   subs.project.push(onSnapshot(pref, (s) => {
-    if (!s.exists()) { S.error = 'This project is not available.'; closeProject(); S.view = 'home'; render(); return; }
+    if (!s.exists()) { gone(); return; }
     S.p = { id: s.id, ...s.data() };
     if (!tabsFor(S.p).includes(S.tab)) S.tab = tabsFor(S.p)[0];
     setHash(); render();
-  }, fail));
+  }, (e) => (e?.code === 'permission-denied' ? gone() : fail(e))));
   const sub = (name, q, key, sort) => subs.project.push(onSnapshot(q, (snap) => { S[key] = sort ? list(snap).sort(sort) : list(snap); render(); }, fail));
   sub('groups', collection(pref, 'groups'), 'groups', (a, b) => a.order - b.order);
   sub('students', collection(pref, 'students'), 'students', (a, b) => a.nickname.localeCompare(b.nickname));
@@ -170,8 +209,30 @@ const joinUrl = (code) => `${publicBaseUrl()}/join.html?code=${code}`;
 const MS_CHIP = { done: ['Handed in', 'ok'], late: ['Late', 'bad'], due: ['Due today', 'warn'], open: ['Open', ''], class: ['In class', ''] };
 
 function topbar() {
-  return header(`<span class="who">${esc(user.email ?? user.displayName ?? '')}</span>${S.isAdmin ? '<button class="link-btn" type="button" data-admin>Admin</button>' : ''}<button class="link-btn" type="button" data-signout>${esc(TT.signOut)}</button>`);
+  return header(`<span class="who">${esc(user.email ?? user.displayName ?? '')}</span>`);
 }
+
+// ---- main menu: a bottom bar on phones, a left column on wide screens -------------------------------------
+const svg = (body) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+const ICON = {
+  projects: svg('<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/>'),
+  new: svg('<circle cx="12" cy="12" r="9"/><path d="M9 12h6M12 9v6"/>'),
+  templates: svg('<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>'),
+  archive: svg('<rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8M10 12h4"/>'),
+  account: svg('<circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>'),
+  admin: svg('<path d="M12 3l7 4v5c0 4-3 7.5-7 9-4-1.5-7-5-7-9V7z"/>'),
+};
+const NAV = [['projects', 'Projects'], ['new', 'New project'], ['templates', 'Templates'], ['archive', 'Archive'], ['account', 'Account']];
+const SECTION_OF = { project: 'projects', idea: 'new', newTemplates: 'new' };
+function nav() {
+  const cur = SECTION_OF[S.view] ?? S.view;
+  const items = S.isAdmin ? [...NAV, ['admin', 'Admin']] : NAV;
+  // Inside a project the wide menu lists the project's tabs under Projects (phones keep the tab row on the page).
+  const sub = S.view === 'project' && S.p ? `<div class="side-sub"><span class="side-title">${esc(S.p.title)}</span>
+    ${tabsFor(S.p).map((k) => `<button type="button" data-tab="${k}" aria-current="${S.tab === k ? 'page' : 'false'}">${TAB_LABEL[k]}</button>`).join('')}</div>` : '';
+  return `<nav class="side" aria-label="Main"><ul>${items.map(([k, label]) => `<li><a href="#/${k}"${cur === k ? ' aria-current="page"' : ''}>${ICON[k]}<span>${label}</span></a>${k === 'projects' ? sub : ''}</li>`).join('')}</ul></nav>`;
+}
+const shell = (body) => `${topbar()}<div class="shell">${nav()}<main class="page stack">${body}</main></div>`;
 
 // ---- sign-in view -------------------------------------------------------------------------------------------
 function signInView() {
@@ -218,11 +279,25 @@ function templateCard(tpl, own = false) {
   </article>`;
 }
 
+/** The next hand-in date of a running project, from the project document alone (no extra reads). */
+function nextHandIn(p) {
+  if (p.status !== 'running') return '';
+  const today = P.isoDay(Date.now(), p.timeZone || tz());
+  const next = (p.skeleton?.phases ?? []).filter((ph) => ph.milestone.handIn === 'link' && p.due?.[ph.id] >= today)
+    .sort((a, b) => p.due[a.id].localeCompare(p.due[b.id]))[0];
+  return next ? `Next hand-in: ${next.milestone.title}, ${fmtDay(p.due[next.id])}` : '';
+}
+
 function projectCard(p) {
   const role = p.owner === user.uid ? '' : ` · co-teacher (${esc(p.coTeacherInfo?.[user.uid]?.subject ?? '')})`;
+  const when = p.status === 'closed'
+    ? `closed ${esc(fmtDate(p.closedAt))}${p.deleteAt ? ` · student data deleted ${esc(fmtDate(p.deleteAt.toMillis?.() ?? null))}` : ''}`
+    : `${p.code ? `Code ${esc(p.code)} · ` : ''}started ${esc(fmtDate(p.createdAt))}`;
+  const next = nextHandIn(p);
   return `<button class="box card project-card" type="button" data-open="${esc(p.id)}">
     <span class="row"><strong>${esc(p.title)}</strong>${chip(STATUS_LABEL[p.status], p.status)}</span>
-    <span class="muted">${p.code ? `Code ${esc(p.code)} · ` : ''}started ${esc(fmtDate(p.createdAt))}${role}</span>
+    <span class="muted">${when}${role}</span>
+    ${next ? `<span class="small">${esc(next)}</span>` : ''}
   </button>`;
 }
 
@@ -240,21 +315,63 @@ function inviteCard() {
       <button class="btn" type="button" data-dropinvite>Not now</button></div></div>`;
 }
 
-function homeView() {
+// ---- menu views: projects, new project, templates, archive, account ---------------------------------------
+function projectsView() {
   const active = S.projects.filter((p) => p.status !== 'closed');
+  const closedCount = S.projects.length - active.length;
+  return `${errorLine()}${inviteCard()}
+    <div class="row head"><h1>Your projects</h1>${active.length ? '<a class="btn primary sm" href="#/new">New project</a>' : ''}</div>
+    ${active.length ? `<div class="list">${active.map(projectCard).join('')}</div>`
+      : `<div class="box stack"><h2>No running projects</h2><p>Pick a classroom-tested template, or start from your own idea.</p>
+        <p><a class="btn primary" href="#/new">Start a new project</a></p></div>`}
+    ${closedCount ? `<p class="muted small">${closedCount} closed project${closedCount === 1 ? '' : 's'} in the <a href="#/archive">Archive</a>.</p>` : ''}`;
+}
+
+function newView() {
+  const own = S.ownTemplates.length;
+  const choice = (href, title, text, go) => `<a class="box card choice" href="${href}"><h3>${title}</h3><p>${text}</p><span class="choice-go">${go}</span></a>`;
+  return `${errorLine()}<h1>Start a new project</h1>
+    <div class="cards">
+      ${choice('#/new/templates', 'From a template', `${S.templates.length} classroom-tested project${S.templates.length === 1 ? '' : 's'}. AI fits the one you pick to your class.`, 'See the templates')}
+      ${choice('#/templates', 'From my templates', own ? `${own} project${own === 1 ? '' : 's'} you saved as your own template.` : 'Projects you saved as your own template. You have none yet.', 'See my templates')}
+      ${choice('#/new/idea', 'From my idea', 'Have a project in mind? Fill in a short form; AI drafts it on the same frame as the templates, and you approve every step.', 'Start from my idea')}
+    </div>`;
+}
+
+function newTemplatesView() {
+  return `${errorLine()}<p><a href="#/new">New project</a></p><h1>Pick a template</h1>
+    ${S.templates.length ? `<div class="cards">${S.templates.map((x) => templateCard(x)).join('')}</div>` : '<p class="muted">No templates are live yet.</p>'}
+    <p class="muted">Nothing fits? <a href="#/new/idea">Start from your own idea</a>.</p>`;
+}
+
+function templatesView() {
+  const pass = hasAccess(S.entitlements, 'potluck');
+  return `${errorLine()}<h1>Your templates</h1>
+    <p class="muted">Start a project from a plan you saved. To save one, open a project and go to Settings, Save as my template.</p>
+    ${pass ? '' : `<p class="note">Own templates need a Hub pass. <a href="${esc(HUB_ACCOUNT_URL)}" target="_blank" rel="noopener">Get a Hub pass</a></p>`}
+    ${S.ownTemplates.length ? `<div class="cards">${S.ownTemplates.map((x) => templateCard(x, true)).join('')}</div>` : '<div class="box"><p class="muted">No templates yet.</p></div>'}`;
+}
+
+function archiveView() {
   const closed = S.projects.filter((p) => p.status === 'closed');
-  return `${topbar()}<main class="page stack">
-    ${errorLine()}${inviteCard()}
-    <h1>Your projects</h1>
-    ${S.projects.length ? `<div class="list">${active.map(projectCard).join('')}</div>
-      ${closed.length ? `<details><summary>Closed projects (${closed.length})</summary><div class="list">${closed.map(projectCard).join('')}</div></details>` : ''}`
-      : '<p class="muted">No projects yet. Start one from a template below.</p>'}
-    <h2>Start a new project</h2>
-    ${S.ownTemplates.length ? `<h2>Your templates</h2><div class="cards">${S.ownTemplates.map((x) => templateCard(x, true)).join('')}</div><h2>Templates</h2>` : ''}
-    <div class="cards">${S.templates.map((x) => templateCard(x)).join('')}
-      <article class="box card stack"><h3>Your own idea</h3><p>Have a project in mind? Fill in a short form; AI drafts it on the same frame as the templates, and you approve every step.</p>
-        <button class="btn primary" type="button" data-newidea ${off()}>Start from my idea</button></article></div>
-  </main>`;
+  return `${errorLine()}<h1>Archive</h1>
+    <p class="muted">Closed projects. Student data (nicknames, hand-ins, assessments) is deleted 90 days after closing; the plan stays.</p>
+    ${closed.length ? `<div class="list">${closed.map(projectCard).join('')}</div>` : '<div class="box"><p class="muted">No closed projects.</p></div>'}`;
+}
+
+function accountView() {
+  const b = balance(S.credits ?? {}, Date.now());
+  const pass = hasAccess(S.entitlements, 'potluck');
+  return `${errorLine()}<h1>Your account</h1>
+    <div class="box stack"><h2>Signed in</h2>
+      <p>${esc(user.displayName ? `${user.displayName} · ${user.email ?? ''}` : user.email ?? '')}</p>
+      <p class="muted small">${esc(ONE_ACCOUNT_TEXT)}</p>
+      <p><button class="btn" type="button" data-signout>${esc(TT.signOut)}</button></p></div>
+    <div class="box stack"><h2>Credits and Hub pass</h2>
+      <p><strong>${b.unlimited ? 'Unlimited credits' : `${b.total} credit${b.total === 1 ? '' : 's'}`}</strong> <span class="muted">· AI steps use credits: fitting a project to your class and the written feedback at the end.</span></p>
+      <p>${pass ? 'Hub pass: active. You can run several projects at once, invite co-teachers and save your own templates.'
+        : 'No Hub pass. You can run one project at a time; co-teachers, own templates and export need a Hub pass.'}</p>
+      <p><a class="btn" href="${esc(HUB_ACCOUNT_URL)}" target="_blank" rel="noopener">Open your Hub account</a></p></div>`;
 }
 
 // ---- project: frame and tabs -----------------------------------------------------------------------------------
@@ -278,19 +395,16 @@ function requestsBanner() {
 
 function projectView() {
   const p = S.p;
-  if (!p) return `${topbar()}<main class="page"><p class="muted">${esc(TT.loading)}</p></main>`;
+  if (!p) return shell(`<p class="muted">${esc(TT.loading)}</p>`);
   const tabs = tabsFor(p);
   const code = p.code ? `<div class="box code-box"><span class="muted">Project code</span><strong class="code">${esc(p.code)}</strong>
     <span class="muted small">Students open <a href="${esc(joinUrl(p.code))}" target="_blank" rel="noopener">${esc(joinUrl(p.code).replace(/^https?:\/\//, ''))}</a></span></div>` : '';
   const views = { setup: setupView, monitor: monitorView, groups: groupsView, handins: handinsView, plan: planView, settings: settingsView, assess: assessView, summary: summaryView };
-  return `${topbar()}<main class="page stack">
-    <p><button class="link-btn" type="button" data-home>All projects</button></p>
-    <div class="row head"><h1>${esc(p.title)}</h1>${chip(STATUS_LABEL[p.status], p.status)}</div>
+  return shell(`<div class="row head"><h1>${esc(p.title)}</h1>${chip(STATUS_LABEL[p.status], p.status)}</div>
     ${code}${requestsBanner()}
-    <nav class="tabs" aria-label="Project">${tabs.map((k) => `<button class="tab" type="button" data-tab="${k}" aria-current="${S.tab === k ? 'page' : 'false'}">${TAB_LABEL[k]}</button>`).join('')}</nav>
+    <nav class="tabs proj-tabs" aria-label="Project">${tabs.map((k) => `<button class="tab" type="button" data-tab="${k}" aria-current="${S.tab === k ? 'page' : 'false'}">${TAB_LABEL[k]}</button>`).join('')}</nav>
     ${errorLine()}${flashLine()}
-    ${(views[S.tab] ?? planView)()}
-  </main>`;
+    ${(views[S.tab] ?? planView)()}`);
 }
 
 // ---- setup -------------------------------------------------------------------------------------------------
@@ -569,8 +683,14 @@ function summaryView() {
 function render() {
   if (user === undefined) { $app.innerHTML = `${header()}<main class="signin"><p class="muted">${esc(TT.loading)}</p></main>`; return; }
   if (user && S.view === 'project') setHash();
-  keepFocus($app, () => { $app.innerHTML = !user ? signInView() : S.view === 'project' ? projectView() : S.view === 'idea' ? `${topbar()}<main class="page stack">${errorLine()}${ai.ideaView()}</main>` : S.view === 'admin' ? `${topbar()}<main class="page stack">${errorLine()}${flashLine()}${admin.view()}</main>` : homeView(); });
+  keepFocus($app, () => {
+    $app.innerHTML = !user ? signInView() : S.view === 'project' ? projectView() : shell((MENU_VIEWS[S.view] ?? projectsView)());
+  });
 }
+const MENU_VIEWS = {
+  projects: projectsView, new: newView, newTemplates: newTemplatesView, templates: templatesView, archive: archiveView, account: accountView,
+  idea: () => `${errorLine()}${ai.ideaView()}`, admin: () => `${errorLine()}${flashLine()}${admin.view()}`,
+};
 
 function printPart(id) {
   const el = document.getElementById(id);
@@ -584,7 +704,7 @@ function printPart(id) {
 
 // ---- AI parts (teacher-ai.js) ------------------------------------------------------------------------
 const ai = aiModule({
-  S, val, clear, act, call, render, tz, lead, openProject, closeProject, hubAccountUrl: HUB_ACCOUNT_URL,
+  S, val, clear, act, call, render, tz, lead, openProject: (pid, tab) => go(projectHash(pid, tab)), closeProject, hubAccountUrl: HUB_ACCOUNT_URL,
 });
 const admin = adminModule({ S, D, val, clear, act, call, render, closeProject, skeletonView });
 
@@ -602,23 +722,23 @@ $app.addEventListener('click', (e) => {
     if (!confirm('Delete this template? Projects started from it stay as they are.')) return;
     return act('deltemplate', () => call('plDeleteTemplate', { id: d.deltemplate }));
   }
-  if ('savetemplate' in d) return act('savetemplate', async () => { await call('plSaveAsTemplate', { projectId: S.pid, title: val('tplTitle', S.p.title) }); clear('tplTitle'); S.flash = 'Saved. It is under Your templates on the start page.'; });
-  if ('signout' in d) { closeProject(); S.view = 'home'; setHash(); return signOut(fb.auth); }
-  if ('home' in d) { closeProject(); S.view = 'home'; S.error = ''; setHash(); return render(); }
-  if (d.open) { S.invite = null; S.error = ''; return openProject(d.open); }
+  if ('savetemplate' in d) return act('savetemplate', async () => { await call('plSaveAsTemplate', { projectId: S.pid, title: val('tplTitle', S.p.title) }); clear('tplTitle'); S.flash = 'Saved. It is under Templates in the menu.'; });
+  if ('signout' in d) { closeProject(); S.view = 'projects'; history.replaceState(null, '', `${location.pathname}${location.search}`); return signOut(fb.auth); }
+  if ('home' in d) return go('#/projects');
+  if (d.open) { S.invite = null; return go(projectHash(d.open)); }
   if (d.tab) { S.tab = d.tab; S.error = ''; S.flash = ''; setHash(); render(); return window.scrollTo(0, 0); }
   if (d.handin) { S.handinPhase = d.handin; return render(); }
   if ('dropinvite' in d) { S.invite = null; return render(); }
   if (d.create) {
     return act('create', async () => {
       const { projectId } = await call('plCreateProject', { templateId: d.create, timeZone: tz() });
-      openProject(projectId);
+      go(projectHash(projectId));
     });
   }
   if ('acceptinvite' in d) {
     return act('accept', async () => {
       const { projectId } = await call('plAcceptInvite', { invite: S.invite.token, subject: val('invSubject', S.invite.subjects[0]) });
-      S.invite = null; openProject(projectId);
+      S.invite = null; go(projectHash(projectId));
     });
   }
   if ('savesetup' in d) return act('save', async () => { await call('plUpdateProject', setupPayload()); clear(''); S.flash = 'Saved.'; });
@@ -710,13 +830,13 @@ onAuthStateChanged(fb.auth, async (u) => {
   user = next;
   subs.home?.(); subs.home = null;
   subs.account.forEach((u) => u()); subs.account = [];
-  if (!user) { closeProject(); S.view = 'home'; render(); return; }
+  if (!user) { closeProject(); S.view = 'projects'; render(); return; }
   SI.email = ''; SI.note = ''; SI.error = '';
   // Meta Pixel: one Lead per browser, on the first teacher sign-in (does nothing without a Pixel id).
   try { if (!localStorage.getItem('pl:lead')) { track('Lead', { content_name: 'Potluck teacher' }); localStorage.setItem('pl:lead', '1'); } } catch { /* storage off */ }
   watchHome();
   watchAccount();
-  const h = readHash();
-  if (h.invite) { history.replaceState(null, '', location.pathname); loadInvite(h.invite); }
-  if (h.p) openProject(h.p, h.tab); else render();
+  const r = parseRoute();
+  if (r.invite) loadInvite(r.invite);
+  applyRoute(r);
 });

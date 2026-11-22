@@ -45,10 +45,9 @@ export function adminModule(ctx) {
   }
 
   function view() {
-    if (!A.list) return `<p><button class="link-btn" type="button" data-home>All projects</button></p><h1>Admin</h1><p class="muted">Loading the templates.</p>`;
+    if (!A.list) return `<h1>Admin</h1><p class="muted">Loading the templates.</p>`;
     const missing = A.builtins.filter((slug) => !A.list.some((x) => x.slug === slug));
-    return `<p><button class="link-btn" type="button" data-home>All projects</button></p>
-      <h1>Templates</h1>
+    return `<h1>Admin: templates</h1>
       <p class="muted">Teachers see the live templates, in this order. Drafts and archived templates stay here.</p>
       <div class="box stack"><h2>Built-in templates</h2>
         <p class="muted">${A.builtins.length} template file${A.builtins.length === 1 ? '' : 's'} in the code${missing.length ? `; not imported yet: ${missing.map(esc).join(', ')}` : ', all imported'}. Importing again updates their content and keeps their status.</p>
@@ -66,7 +65,6 @@ export function adminModule(ctx) {
   }
 
   function onClick(d) {
-    if ('admin' in d) { ctx.closeProject(); S.view = 'admin'; A.list = null; render(); act('admin', load); return true; }
     if (d.tplopen) { A.open = A.open === d.tplopen ? null : d.tplopen; render(); return true; }
     if (d.tplstatus) { act('tpl', async () => { await call('plAdminSetTemplate', { id: d.tpl, status: d.tplstatus }); await load(); }); return true; }
     if (d.tplorder) { act('tpl', async () => { await call('plAdminSetTemplate', { id: d.tplorder, order: Number(val(`order-${d.tplorder}`)) }); clear(`order-${d.tplorder}`); await load(); }); return true; }
@@ -89,5 +87,8 @@ export function adminModule(ctx) {
     return false;
   }
 
-  return { view, onClick, readFile };
+  /** Opening the Admin view (route #/admin): loads the template list. */
+  function open() { A.list = null; act('admin', load); }
+
+  return { view, onClick, readFile, open };
 }

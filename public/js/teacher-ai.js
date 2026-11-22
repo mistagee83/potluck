@@ -79,8 +79,7 @@ export function aiModule(ctx) {
   function ideaView() {
     const area = (k, label, rows = 2, hint = '') => `<div class="field"><label for="idea-${k}">${label}</label>${hint ? `<span class="muted small">${hint}</span>` : ''}
       <textarea id="idea-${k}" rows="${rows}" maxlength="${IDEA_FIELDS[k]}" data-k="idea-${k}">${esc(val(`idea-${k}`))}</textarea></div>`;
-    return `<p><button class="link-btn" type="button" data-home>All projects</button></p>
-      <h1>Start from <span class="hl">your idea</span></h1>
+    return `<h1>Start from <span class="hl">your idea</span></h1>
       <p class="muted">Fill in what you know; AI drafts the plan on Potluck’s project frame, and you approve or change every step.</p>
       ${creditsLine()}
       <div class="box stack"><h2>The idea</h2>
@@ -208,7 +207,6 @@ export function aiModule(ctx) {
   // ---- buttons ---------------------------------------------------------------------------------------------------
   const errorsFrom = (e) => { S.fieldErrors = e?.details?.errors ?? e?.errors ?? []; };
   function onClick(d) {
-    if ('newidea' in d) { S.view = 'idea'; S.fieldErrors = []; ctx.closeProject(); render(); window.scrollTo(0, 0); return true; }
     if ('ideago' in d) {
       const inputs = readInputs('idea-', { subjects: [] });
       const idea = { ...inputs, productType: val('idea-productType', 'presentation') };

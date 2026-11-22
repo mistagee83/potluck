@@ -254,3 +254,27 @@
 **P4 status**: Potluck is live and listed on the Hub. Open: an AI step with real credits and a phone test on the
 live address (not run here), Google sign-in directly on Potluck (not run here), the open test project "Live
 test: 5-star disaster".
+
+## After launch – teacher page menu (2026-11-22)
+
+**Decision (András, 2026-11-22)**: a real dashboard after sign-in with a menu: Projects, New project, Templates,
+Archive, Account (+ Admin). SPEC 7a.
+
+**Built**
+- `public/js/teacher.js`: hash routes (`#/projects`, `#/new`, `#/new/templates`, `#/new/idea`, `#/templates`,
+  `#/archive`, `#/account`, `#/admin`, `#/p/<id>/<tab>`), the old one-page start split into these views, the
+  menu (`nav()`, inline stroke icons), the Account view (credits, Hub pass, sign-out moved here from the header).
+  A project link that is missing or not yours returns to Projects with "This project is not available" (it used
+  to stay on "Loading").
+- `admin.js`: `open()` for the #/admin route; `teacher-ai.js`: the idea form is a route. The "All projects"
+  links are gone (the menu replaces them).
+- `app.css`: bottom bar on phones, sticky left column from 900px with the project tabs under Projects.
+
+**Verified (emulators, built-in browser)**
+- `npm test` passes. Desktop (1024px) and phone (375px): every menu item, the project tabs in the left column,
+  Back through project → archive → project → template list, reload keeps the view, an old `#p=…&tab=plan` link
+  opens the Plan tab, an unknown project id returns to Projects with the note, no sideways scroll on the phone.
+  Admin import + publish, project from a template, launch: the Projects card shows "Next hand-in".
+- Not tested: the co-teacher invitation link through the new routes (the code path is unchanged: `#invite=` is
+  read at sign-in), the live address.
+

@@ -102,6 +102,22 @@ teachers also arrive with custom tokens). Students get no `users/{uid}` document
    nicknames, no scores. The teacher turns it on; the link expires after 30 days (the teacher can extend it) and
    at the latest with the 90-day deletion.
 
+### 7a. Teacher page menu (decided 2026-11-22)
+
+After sign-in the teacher page has a main menu: a bottom bar on phones, a left column from 900px.
+- **Projects** (`#/projects`): running and setting-up projects; the card shows status, code, start date and the
+  next hand-in date (from the project document, no extra reads). A "New project" button; closed projects are counted
+  with a link to the Archive.
+- **New project** (`#/new`): three ways in: from a template (`#/new/templates`), from my templates
+  (`#/templates`), from my idea (`#/new/idea`, section 8).
+- **Templates** (`#/templates`): the teacher's own templates (Hub pass), start or delete.
+- **Archive** (`#/archive`): closed projects with the closing and deletion dates.
+- **Account** (`#/account`): who is signed in, credits, Hub pass, link to the Hub account, sign-out.
+- **Admin** (`#/admin`): Hub admins only.
+- Inside a project (`#/p/<id>/<tab>`) the tabs stay; on wide screens they sit in the menu under Projects.
+- Every menu step is a browser history entry (Back works); tab switches are not. Old links (`#p=<id>&tab=<tab>`,
+  `#invite=<token>`) still work.
+
 ## 8. Own idea (decided 2026-11-21)
 
 The teacher does not write free text but fills in an **idea form** whose fields are the skeleton's basics: driving
