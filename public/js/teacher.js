@@ -168,7 +168,7 @@ function watchHome() {
 function closeProject() {
   subs.project.forEach((u) => u()); subs.project = [];
   Object.assign(S, { pid: null, p: null, groups: [], students: [], requests: [], tasks: [], subs: [], assess: [], tab: null, fbDrafts: [], fieldErrors: [],
-    inviteLink: '', exhibitionLink: '', summary: null, handinPhase: null });
+    inviteLink: '', exhibitionLink: '', summary: null, handinPhase: null, critEdit: null, critErrors: [] });
 }
 
 function openProject(pid, tab = null) {
@@ -809,6 +809,8 @@ $app.addEventListener('change', (e) => {
   if (e.target.dataset?.angle) act('angle', () => call('plSetGroupBrief', { projectId: S.pid, groupId: e.target.dataset.angle, briefId: e.target.value || null }));
   if ('tplfile' in (e.target.dataset ?? {})) admin.readFile(e.target);
 });
+
+$app.addEventListener('input', (e) => ai.onInput(e.target));
 
 $app.addEventListener('submit', (e) => {
   e.preventDefault();

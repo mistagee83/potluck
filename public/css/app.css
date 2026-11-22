@@ -176,3 +176,7 @@ ul.error { margin: 0; padding-left: 30px; }
 
 /* cookie banner (only with a Pixel id) */
 .cookie-banner { position: fixed; left: 12px; right: 12px; bottom: 12px; max-width: 560px; margin: 0 auto; z-index: 50; display: grid; gap: 10px; }
+
+/* criteria edited by hand (Setup) */
+.crit-edit { border: var(--pl-line-thin) solid var(--c-line); border-radius: var(--pl-radius-small); padding: 12px 14px; margin: 0; min-width: 0; }
+.crit-edit legend { font-weight: 900; padding: 0 6px; }

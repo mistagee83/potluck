@@ -9,7 +9,7 @@ export {
   plJoin, plJoinStatus, plLeaveDevice, plChooseGroup, plTask, plSubmit, plAssess, plGallery, plExhibitionView,
 } from './student.js';
 export {
-  plCreateFromIdea, plTailorInputs, plTailorStep, plTailorDecide, plFeedbackDraft, plFeedbackApprove,
+  plCreateFromIdea, plTailorInputs, plTailorStep, plTailorDecide, plEditCriteria, plFeedbackDraft, plFeedbackApprove,
 } from './ai.js';
 export {
   plAdminTemplates, plAdminImportBuiltins, plAdminUpload, plAdminSetTemplate, plSaveAsTemplate, plDeleteTemplate,

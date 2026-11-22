@@ -107,3 +107,48 @@ test('model schema: nullable becomes a type list', () => {
   assert.ok(!/maxLength|maxItems|minimum/.test(JSON.stringify(m)));
   assert.match(m.properties.tasks.items.properties.title.description ?? '', /at most 80 characters/);
 });
+
+const rowsOf = (s) => s.assessment.criteria.map((c) => ({ ...c, levels: [1, 2, 3, 4].map((n) => c.levels.find((l) => l.score === n).descriptor) }));
+
+test('criteria by hand: the template criteria save unchanged, ids kept', () => {
+  const s = sk();
+  const r = A.editCriteria(s, rowsOf(s));
+  assert.deepEqual(r.errors, []);
+  assert.ok(r.complete);
+  assert.deepEqual(r.criteria, s.assessment.criteria);
+});
+
+test('criteria by hand: a new row gets a unique id from its name; edits apply', () => {
+  const s = sk();
+  const rows = rowsOf(s);
+  rows[0].name = '  Clear structure  '; rows[0].weight = '3';
+  rows.push({ name: rows[1].name, subject: 'all', weight: 2, peer: false, levels: ['a', 'b', 'c', 'd'] });
+  const r = A.editCriteria(s, rows);
+  assert.deepEqual(r.errors, []);
+  assert.equal(r.criteria[0].name, 'Clear structure');
+  assert.equal(r.criteria[0].weight, 3);
+  const added = r.criteria.at(-1);
+  assert.match(added.id, /^[a-z0-9][a-z0-9-]*$/);
+  assert.equal(new Set(r.criteria.map((c) => c.id)).size, r.criteria.length);
+  assert.deepEqual(added.levels.map((l) => l.score), [1, 2, 3, 4]);
+});
+
+test('criteria by hand: empty fields, count, subject and peers are refused with paths', () => {
+  const s = sk();
+  const rows = rowsOf(s).map((c) => ({ ...c, peer: false }));
+  rows[0].name = ''; rows[1].levels[2] = ' '; rows[2].subject = 'Chemistry'; rows[0].weight = 5;
+  const paths = A.editCriteria(s, rows).errors.map((e) => e.path);
+  for (const p of ['assessment.criteria[0].name', 'assessment.criteria[1].levels[2].descriptor', 'assessment.criteria[2].subject', 'assessment.criteria[0].weight', 'assessment.criteria']) {
+    assert.ok(paths.includes(p), p);
+  }
+  assert.ok(A.editCriteria(s, rowsOf(s).slice(0, 2)).errors.some((e) => e.path === 'assessment.criteria'));
+  assert.ok(A.editCriteria(s, 'nope').errors.length);
+});
+
+test('criteria by hand: only criteria errors block; missing questions keep the step incomplete', () => {
+  const s = sk();
+  s.assessment.selfQuestions = [];
+  const r = A.editCriteria(s, rowsOf(s));
+  assert.deepEqual(r.errors, []);
+  assert.equal(r.complete, false);
+});

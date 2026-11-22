@@ -88,6 +88,11 @@ teachers also arrive with custom tokens). Students get no `users/{uid}` document
    questions; (5) printable handouts (optional). Input: teachers and subjects, number and size of groups, time,
    level, language, local context. The language is the teacher's choice (decided 2026-11-21): the texts students
    read are written in it, the UI stays English. How the steps work: section 9a.
+   **Criteria by hand** (decided 2026-11-22): before launch the lead teacher can also edit the criteria directly
+   on Setup, free: name, subject (or all), weight 1-3, peer-scored or not, the four level descriptions; add or
+   remove within 3-8. Checked like a model's output (`editCriteria` in `engines/ai.js`, callable
+   `plEditCriteria`); only possible once the assessment step exists and no assessment (or step 0) version is
+   waiting. After launch the criteria are fixed. Other parts are not editable by hand.
 3. **Launch:** groups (teacher assigns or students choose), a due date for every milestone (set by the teacher at
    launch, editable later; decided 2026-11-21), project code, co-teacher invitations.
 4. **Run, without AI:** group board per phase (task, owner, status); milestones (link + reflection + who did what);

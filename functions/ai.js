@@ -10,7 +10,7 @@ import { spendCredits, refundCredits, CreditError } from './credits.js';
 import { generateJson, prompt, render, mockPart, mockFeedback, ModelUnavailableError, MODEL, isMock } from './llm.js';
 import {
   STEPS, TAILOR_STEPS, PART_SCHEMAS, LANGUAGES, actionFor, checkInputs, checkIdea, applyInputs, blankSkeleton,
-  mergePart, checkStep, partOf, FEEDBACK_SCHEMA, FEEDBACK_LIMITS, checkFeedback,
+  mergePart, checkStep, partOf, editCriteria, FEEDBACK_SCHEMA, FEEDBACK_LIMITS, checkFeedback,
 } from './engines/ai.js';
 import { validate } from './engines/skeleton.js';
 import { STATUS, defaultGroupNames, cleanText } from './engines/project.js';
@@ -200,6 +200,25 @@ export const plTailorDecide = callable(async (req) => {
     'tailor.proposal': null, 'tailor.done': done, 'tailor.stale': [...stale], updatedAt: now(),
   });
   return { stale: [...stale] };
+});
+
+/** The criteria edited by hand: free, lead teacher, before launch; checked like a model's output. */
+export const plEditCriteria = callable(async (req) => {
+  const { p, ref } = await teacherProject(req, req.data?.projectId, 'lead');
+  needStatus(p, STATUS.setup);
+  // A waiting AI version of the assessment (or of step 0) would overwrite the edit when used.
+  if (['assessment', 'idea'].includes(p.tailor?.proposal?.step)) fail('failed-precondition', 'proposal-open');
+  if (!p.skeleton.assessment.selfQuestions.length) fail('failed-precondition', 'assessment-first');
+  const done = p.tailor?.done ?? (p.source === 'idea' ? [] : TAILOR_STEPS);
+  const { criteria, errors, complete } = editCriteria(p.skeleton, req.data?.criteria, done);
+  if (errors.length) fail('invalid-argument', 'bad-input', { errors: errors.slice(0, 30) });
+  const nextDone = new Set(done);
+  const stale = new Set(p.tailor?.stale ?? []);
+  if (complete) { nextDone.add('assessment'); stale.delete('assessment'); }
+  await ref.update({
+    'skeleton.assessment.criteria': criteria, 'tailor.done': [...nextDone], 'tailor.stale': [...stale], updatedAt: now(),
+  });
+  return { ok: true };
 });
 
 // ---- final feedback ---------------------------------------------------------------------------------------

@@ -120,6 +120,7 @@ export const ERRORS = {
   'hub-pass-template': 'Own templates need a Hub pass.',
   'too-many-templates': 'You have 30 templates. Delete one first.',
   'bad-brief': 'Choose one of the angles.',
+  'assessment-first': 'Write the assessment step first: the criteria come with it.',
   network: 'No connection. Check the internet and try again.',
   timeout: 'This took too long. Try again.',
 };

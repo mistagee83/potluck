@@ -109,7 +109,8 @@ export function aiModule(ctx) {
     return `<li class="step-row">
       <div><strong>${STEPS[step].n}. ${esc(STEPS[step].label)}</strong> ${status}<br><span class="muted small">${esc(STEP_HELP[step])}</span></div>
       ${waiting ? '' : `<div class="row"><button class="btn sm" type="button" data-step="${step}" ${off()} ${blocked || needIdea || !canPay(action) ? 'disabled' : ''}>${done || stale ? 'Write a new version' : 'Write it'}</button>
-        <span class="muted small">${esc(costLabel(action))}</span></div>`}
+        <span class="muted small">${esc(costLabel(action))}</span>
+        ${step === 'assessment' && canEditCriteria(t) && !S.critEdit ? `<button class="btn sm" type="button" data-critedit ${off()}>Edit the criteria</button><span class="muted small">free</span>` : ''}</div>`}
     </li>`;
   }
 
@@ -179,7 +180,59 @@ export function aiModule(ctx) {
         <p><button class="btn sm" type="button" data-saveinputs ${off()} ${t.proposal ? 'disabled' : ''}>Save these numbers</button></p></div></details>
       <ul class="plain steps">${steps.map((s) => stepRow(s, t)).join('')}</ul>
       ${missing.length ? `<p class="note">Before you launch: ${missing.map((s) => esc(STEPS[s]?.label ?? s)).join(', ')} still need${missing.length === 1 ? 's' : ''} work.</p>` : ''}
-    </div>${proposalBox(t)}`;
+    </div>${proposalBox(t)}${criteriaEditor()}`;
+  }
+
+  // ---- criteria by hand (free, before launch) ---------------------------------------------------------------------
+  const CRIT_MAX = 8; const CRIT_MIN = 3;
+  const canEditCriteria = (t) => S.p.skeleton.assessment.selfQuestions.length > 0 && !['assessment', 'idea'].includes(t.proposal?.step);
+  const blankCriterion = () => ({ id: '', name: '', subject: 'all', weight: 1, peer: false, levels: ['', '', '', ''] });
+  const toRows = (criteria) => criteria.map((c) => ({
+    id: c.id, name: c.name, subject: c.subject, weight: c.weight, peer: c.peer,
+    levels: [1, 2, 3, 4].map((n) => c.levels.find((l) => l.score === n)?.descriptor ?? ''),
+  }));
+  function critErrorText(e) {
+    const m = e.path.match(/^assessment\.criteria\[(\d+)\](?:\.levels\[(\d+)\])?(?:\.(\w+))?/);
+    const msg = e.message === 'empty' ? 'write something here' : e.message;
+    if (!m) return /items/.test(e.message) ? `Keep ${CRIT_MIN}-${CRIT_MAX} criteria.` : `${msg[0].toUpperCase()}${msg.slice(1)}.`;
+    const field = m[2] !== undefined ? `level ${Number(m[2]) + 1}` : m[3] && m[3] !== 'levels' ? m[3] : '';
+    return `Criterion ${Number(m[1]) + 1}${field ? `, ${field}` : ''}: ${msg}.`;
+  }
+  function criteriaEditor() {
+    const rows = S.critEdit;
+    if (!rows) return '';
+    const subjects = ['all', ...S.p.skeleton.basics.subjects.map((s) => s.name)];
+    const levelLabel = ['1 (lowest)', '2', '3', '4 (highest)'];
+    return `<div class="box stack" id="crit-edit">
+      <h2>Edit the criteria</h2>
+      <p class="muted">Free, before launch. ${CRIT_MIN}-${CRIT_MAX} criteria; every level needs a description. At least one criterion is scored by peers: the other groups score it in the gallery round. Each teacher scores the criteria of their own subject; "All subjects" is scored by the lead teacher.</p>
+      ${rows.map((c, i) => `<fieldset class="crit-edit stack"><legend>Criterion ${i + 1}</legend>
+        <div class="field"><label for="ce-${i}-name">Name</label><input id="ce-${i}-name" type="text" maxlength="60" data-ce="${i}.name" value="${esc(c.name)}"></div>
+        <div class="grid2">
+          <div class="field"><label for="ce-${i}-subject">Subject</label><select id="ce-${i}-subject" data-ce="${i}.subject">${subjects.map((s) => `<option value="${esc(s)}" ${c.subject === s ? 'selected' : ''}>${esc(s === 'all' ? 'All subjects' : s)}</option>`).join('')}</select></div>
+          <div class="field"><label for="ce-${i}-weight">Weight</label><select id="ce-${i}-weight" data-ce="${i}.weight">${[1, 2, 3].map((w) => `<option value="${w}" ${Number(c.weight) === w ? 'selected' : ''}>${w}</option>`).join('')}</select></div>
+        </div>
+        <label class="check"><input id="ce-${i}-peer" type="checkbox" data-ce="${i}.peer" ${c.peer ? 'checked' : ''}> Peers score it too</label>
+        ${c.levels.map((d, j) => `<div class="field"><label for="ce-${i}-l${j}">Level ${levelLabel[j]}</label><textarea id="ce-${i}-l${j}" rows="2" maxlength="240" data-ce="${i}.levels.${j}">${esc(d)}</textarea></div>`).join('')}
+        ${rows.length > CRIT_MIN ? `<p><button class="link-btn danger" type="button" data-critremove="${i}" ${off()}>Remove this criterion</button></p>` : ''}
+      </fieldset>`).join('')}
+      ${rows.length < CRIT_MAX ? `<p><button class="btn sm" type="button" data-critadd ${off()}>Add a criterion</button></p>` : ''}
+      ${S.critErrors?.length ? `<ul class="error">${S.critErrors.map((e) => `<li>${esc(critErrorText(e))}</li>`).join('')}</ul>` : ''}
+      <div class="row"><button class="btn primary sm" type="button" data-critsave ${off()}>Save the criteria</button>
+        <button class="btn sm" type="button" data-critcancel ${off()}>Cancel</button></div>
+    </div>`;
+  }
+  /** Typing in the editor: rows live in S.critEdit (rows are added and removed, so not in the drafts). */
+  function onInput(el) {
+    const path = el.dataset?.ce;
+    if (!path || !S.critEdit) return;
+    const [i, field, j] = path.split('.');
+    const row = S.critEdit[Number(i)];
+    if (!row) return;
+    if (field === 'levels') row.levels[Number(j)] = el.value;
+    else if (field === 'peer') row.peer = el.checked;
+    else if (field === 'weight') row.weight = Number(el.value);
+    else row[field] = el.value;
   }
 
   // ---- final feedback ------------------------------------------------------------------------------------------
@@ -238,6 +291,24 @@ export function aiModule(ctx) {
       });
       return true;
     }
+    if ('critedit' in d) {
+      S.critEdit = toRows(S.p.skeleton.assessment.criteria); S.critErrors = [];
+      render(); setTimeout(() => document.getElementById('crit-edit')?.scrollIntoView({ behavior: 'smooth' }), 50);
+      return true;
+    }
+    if ('critcancel' in d) { S.critEdit = null; S.critErrors = []; render(); return true; }
+    if ('critadd' in d) { S.critEdit.push(blankCriterion()); render(); return true; }
+    if (d.critremove !== undefined) { S.critEdit.splice(Number(d.critremove), 1); S.critErrors = []; render(); return true; }
+    if ('critsave' in d) {
+      act('crit', async () => {
+        S.critErrors = [];
+        try {
+          await call('plEditCriteria', { projectId: S.pid, criteria: S.critEdit });
+          S.critEdit = null; S.flash = 'Criteria saved.';
+        } catch (e) { S.critErrors = e?.details?.errors ?? []; throw e; }
+      });
+      return true;
+    }
     if ('accept' in d) { act('accept', async () => { const r = await call('plTailorDecide', { projectId: S.pid, accept: true }); clear('note'); S.flash = r.stale?.length ? `Used. Now write a new version of: ${r.stale.map((s) => STEPS[s].label).join(', ')}.` : 'Used.'; }); return true; }
     if ('discard' in d) { act('discard', () => call('plTailorDecide', { projectId: S.pid, accept: false })); return true; }
     if (d.fbdraft) { act('fbdraft', async () => { await call('plFeedbackDraft', { projectId: S.pid, groupId: d.fbdraft }); clear(`fb-${d.fbdraft}-`); }); return true; }
@@ -251,5 +322,5 @@ export function aiModule(ctx) {
     return false;
   }
 
-  return { creditsLine, ideaView, tailorSection, feedbackSection, onClick };
+  return { creditsLine, ideaView, tailorSection, feedbackSection, onClick, onInput };
 }

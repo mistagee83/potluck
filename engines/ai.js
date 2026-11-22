@@ -217,6 +217,46 @@ export function checkStep(candidate, step, done = []) {
   return { errors, stale: [...stale] };
 }
 
+// ---- editing by hand (setup only, free; SPEC 7) --------------------------------------------------------------
+
+const slug = (s) => String(s).toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 20);
+
+/**
+ * The teacher's own criteria. raw: [{ id?, name, subject, weight, peer, levels: [descriptor for 1..4] }].
+ * Kept ids stay; new rows get an id from the name. Checked like a model's output: only errors in the
+ * criteria block the save. complete: the whole assessment step is valid now (its questions too), so it
+ * counts as done and no longer needs a new version. Returns { criteria, errors, complete }.
+ */
+export function editCriteria(sk, raw, done = TAILOR_STEPS) {
+  if (!Array.isArray(raw)) return { criteria: [], errors: [{ path: 'assessment.criteria', message: 'missing' }], complete: false };
+  const used = new Set();
+  const free = (base) => {
+    const b = base || 'criterion';
+    let id = b;
+    for (let n = 2; used.has(id); n++) id = `${b}-${n}`;
+    return id;
+  };
+  const criteria = raw.slice(0, SK.criteria[1] + 1).map((c) => {
+    const keep = typeof c?.id === 'string' && /^[a-z0-9][a-z0-9-]{0,23}$/.test(c.id) && !used.has(c.id);
+    const id = keep ? c.id : free(slug(c?.name ?? ''));
+    used.add(id);
+    const levels = Array.isArray(c?.levels) ? c.levels : [];
+    return {
+      id,
+      name: String(c?.name ?? '').trim(),
+      subject: String(c?.subject ?? ''),
+      weight: Number(c?.weight),
+      peer: c?.peer === true,
+      levels: [1, 2, 3, 4].map((score, i) => ({ score, descriptor: String(levels[i] ?? '').trim() })),
+    };
+  });
+  const candidate = structuredClone(sk);
+  candidate.assessment.criteria = criteria;
+  const { errors: stepErrors } = checkStep(candidate, 'assessment', done);
+  const errors = stepErrors.filter((e) => e.path.startsWith('assessment.criteria'));
+  return { criteria, errors, complete: stepErrors.length === 0 };
+}
+
 /** Problems that block launching: the full skeleton check, grouped by the step that fixes them. */
 export function launchProblems(sk) {
   const all = [...validate(SKELETON_SCHEMA, sk), ...checkSkeletonSafe(sk)];

@@ -280,3 +280,24 @@ Archive, Account (+ Admin). SPEC 7a.
 - Live 2026-11-22 (András's approval): `dev` pushed, `main` fast-forwarded to `992c50f` and pushed; Cloudflare Pages
   serves the new `teacher.js` and `app.css` (checked with curl); the signed-out live page loads without console
   errors. Not checked: the signed-in menu on the live address (needs András's sign-in).
+
+## After launch – criteria by hand (2026-11-22)
+
+**Decision (András, 2026-11-22)**: criteria editable by hand, free, before launch only (SPEC 7, step 2).
+
+**Built**
+- `engines/ai.js` `editCriteria`: cleans the rows, keeps valid ids, gives new rows a unique id from the name,
+  runs `checkStep` for the assessment step; only criteria errors block; `complete` marks the step done and
+  no longer stale. `functions/ai.js` `plEditCriteria` (lead, setup, no waiting assessment/step 0 version,
+  assessment written first: `assessment-first`).
+- `teacher-ai.js`: "Edit the criteria" (free) on the assessment step row; editor with name, subject, weight,
+  peers, four levels, add/remove (3-8), readable error list; rows kept in `S.critEdit` (`onInput`).
+
+**Verified**
+- `npm test`: 42 pass (4 new: unchanged save, new row id and edits, refusals with paths, questions missing).
+- Emulator, built-in browser: opened the editor on a template project, typed a new name; an empty level, no
+  peer criterion and an empty new row were refused ("Criterion 2, level 3: write something here." etc.);
+  fixed and saved ("Criteria saved."), the Plan tab shows the new name, weights and the one peer criterion.
+  No sideways scroll at 375px.
+- Not tested: refusal after launch (the callable needs status setup; the button is on Setup only), co-teacher
+  scoring with edited subjects, the live address.
