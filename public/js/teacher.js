@@ -10,6 +10,7 @@ import {
   collection, doc, onSnapshot, query, where,
 } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js';
 import { ONE_ACCOUNT_TEXT, authErrorText, isEmail, hubAccountUrl, redeemSso, takeSsoCode } from './hub/sso.js';
+import { HUB_ORIGIN, avatarSrc, initialOf } from './hub/avatar.js';
 import { firebase, USE_EMULATORS } from './firebase.js';
 import { publicBaseUrl, HUB_ACCOUNT_URL } from './config.js';
 import { TT } from './text.js';
@@ -31,6 +32,7 @@ const S = {
   view: 'projects', projects: [], pid: null, p: null, groups: [], students: [], requests: [], tasks: [], subs: [], assess: [],
   tab: null, busy: '', error: '', flash: '', invite: null, inviteLink: '', exhibitionLink: '', summary: null, handinPhase: null,
   credits: null, prices: {}, fbDrafts: [], fieldErrors: [], entitlements: {}, templates: [], ownTemplates: [], isAdmin: false,
+  avatar: null, // users/{uid}.avatar, chosen on the Hub (/account → Settings → Your picture); null = the initial
 };
 const subs = { home: null, project: [], account: [] };
 
@@ -144,7 +146,7 @@ window.addEventListener('hashchange', () => { if (user) applyRoute(parseRoute())
 function watchAccount() {
   subs.account.forEach((u) => u());
   subs.account = [
-    onSnapshot(doc(fb.db, 'users', user.uid), (s) => { S.credits = s.data()?.credits ?? {}; S.entitlements = s.data()?.entitlements ?? {}; render(); }, () => {}),
+    onSnapshot(doc(fb.db, 'users', user.uid), (s) => { S.credits = s.data()?.credits ?? {}; S.entitlements = s.data()?.entitlements ?? {}; S.avatar = s.data()?.avatar ?? null; render(); }, () => {}),
     onSnapshot(query(collection(fb.db, 'plTemplates'), where('owner', '==', ''), where('status', '==', 'live')), (s) => {
       S.templates = s.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)); render();
     }, () => {}),
@@ -208,8 +210,16 @@ const todayIso = () => P.isoDay(Date.now(), S.p?.timeZone || tz());
 const joinUrl = (code) => `${publicBaseUrl()}/join.html?code=${code}`;
 const MS_CHIP = { done: ['Handed in', 'ok'], late: ['Late', 'bad'], due: ['Due today', 'warn'], open: ['Open', ''], class: ['In class', ''] };
 
+// The Hub avatar before the name (the image comes from the Hub); an unknown id or none = the initial.
+function avatarHtml() {
+  const src = avatarSrc(S.avatar, HUB_ORIGIN);
+  return src
+    ? `<img class="avatar" src="${esc(src)}" alt="" width="28" height="28">`
+    : `<span class="avatar avatar-initial" aria-hidden="true">${esc(initialOf(user.displayName, user.email))}</span>`;
+}
+
 function topbar() {
-  return header(`<span class="who">${esc(user.email ?? user.displayName ?? '')}</span>`);
+  return header(`${avatarHtml()}<span class="who">${esc(user.email ?? user.displayName ?? '')}</span>`);
 }
 
 // ---- main menu: a bottom bar on phones, a left column on wide screens -------------------------------------

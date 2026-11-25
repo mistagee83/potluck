@@ -61,6 +61,9 @@ a.logo:hover { color: var(--c-on-accent); }
   padding: 5px 12px; font-size: 12px; font-weight: 800; color: var(--c-text); max-width: 100%;
 }
 .pill .who { overflow-wrap: anywhere; }
+/* The Hub avatar in the pill (2026-11-25); the thin line ring keeps green avatars apart from the cream. */
+.pill .avatar { flex-shrink: 0; width: 28px; height: 28px; margin: -3px 0 -3px -6px; border-radius: 50%; border: 2px solid var(--c-line); box-sizing: border-box; }
+.pill .avatar-initial { display: inline-flex; align-items: center; justify-content: center; background: var(--c-surface, #fff); font-size: 13px; }
 
 /* ---- buttons ---- */
 .btn {
